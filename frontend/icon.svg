@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <defs>
+    <clipPath id="circle-clip">
+      <circle cx="48" cy="48" r="48"/>
+    </clipPath>
+    <linearGradient id="wave-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a5a9a"/>
+      <stop offset="100%" stop-color="#0d2240"/>
+    </linearGradient>
+    <linearGradient id="foam-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#c8e8ff"/>
+      <stop offset="50%" stop-color="#dff0ff"/>
+      <stop offset="100%" stop-color="#5ba8e0"/>
+    </linearGradient>
+    <radialGradient id="sky-grad" cx="70%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="#1a5a9a" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#07162a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g clip-path="url(#circle-clip)">
+    <!-- Background -->
+    <rect width="96" height="96" fill="#07162a"/>
+    <rect width="96" height="96" fill="url(#sky-grad)"/>
+    
+    <!-- Deep water -->
+    <path d="M0 65 Q24 58 48 62 Q72 66 96 60 L96 96 L0 96 Z" fill="#0d2240" opacity="0.7"/>
+    
+    <!-- Main wave body -->
+    <path d="M-5 55 Q10 48 22 42 Q32 37 38 33 Q44 29 48 28 Q52 27 55 30 Q58 33 56 38 Q54 42 50 44 Q46 46 42 50 Q38 54 36 58 Q34 62 40 64 Q50 66 65 60 Q80 54 96 58 L96 96 L0 96 Z" fill="url(#wave-grad)"/>
+    
+    <!-- Wave crest / curl -->
+    <path d="M48 28 Q52 26 56 28 Q60 30 58 34 Q56 38 52 40 Q48 42 44 44 Q40 46 38 48" fill="none" stroke="url(#foam-grad)" stroke-width="2.5" stroke-linecap="round"/>
+    
+    <!-- Foam spray -->
+    <path d="M50 28 Q54 24 58 26 Q62 22 60 20" fill="none" stroke="#c8e8ff" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
+    <path d="M54 26 Q58 20 62 22" fill="none" stroke="#c8e8ff" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+    <path d="M56 24 Q60 18 64 20" fill="none" stroke="#dff0ff" stroke-width="0.8" stroke-linecap="round" opacity="0.5"/>
+    
+    <!-- Foam dots -->
+    <circle cx="52" cy="30" r="1.2" fill="#c8e8ff" opacity="0.9"/>
+    <circle cx="56" cy="26" r="1" fill="#dff0ff" opacity="0.7"/>
+    <circle cx="60" cy="24" r="0.8" fill="#c8e8ff" opacity="0.6"/>
+    <circle cx="48" cy="32" r="0.9" fill="#dff0ff" opacity="0.8"/>
+    <circle cx="58" cy="22" r="0.7" fill="#c8e8ff" opacity="0.5"/>
+    
+    <!-- Neural network nodes woven into foam -->
+    <circle cx="50" cy="27" r="2" fill="none" stroke="#5ba8e0" stroke-width="0.6" opacity="0.7"/>
+    <circle cx="57" cy="23" r="1.8" fill="none" stroke="#5ba8e0" stroke-width="0.6" opacity="0.6"/>
+    <circle cx="63" cy="21" r="1.5" fill="none" stroke="#5ba8e0" stroke-width="0.5" opacity="0.5"/>
+    <circle cx="45" cy="34" r="1.6" fill="none" stroke="#5ba8e0" stroke-width="0.5" opacity="0.5"/>
+    
+    <!-- Neural connections -->
+    <line x1="50" y1="27" x2="57" y2="23" stroke="#5ba8e0" stroke-width="0.4" opacity="0.4"/>
+    <line x1="57" y1="23" x2="63" y2="21" stroke="#5ba8e0" stroke-width="0.4" opacity="0.35"/>
+    <line x1="50" y1="27" x2="45" y2="34" stroke="#5ba8e0" stroke-width="0.4" opacity="0.35"/>
+    <line x1="45" y1="34" x2="52" y2="30" stroke="#5ba8e0" stroke-width="0.3" opacity="0.3"/>
+    
+    <!-- Small neural dots (nodes) -->
+    <circle cx="50" cy="27" r="1" fill="#5ba8e0" opacity="0.6"/>
+    <circle cx="57" cy="23" r="0.9" fill="#5ba8e0" opacity="0.5"/>
+    <circle cx="63" cy="21" r="0.7" fill="#5ba8e0" opacity="0.4"/>
+    <circle cx="45" cy="34" r="0.8" fill="#5ba8e0" opacity="0.45"/>
+    
+    <!-- Secondary wave -->
+    <path d="M0 72 Q15 68 30 70 Q45 72 60 68 Q75 64 96 70 L96 96 L0 96 Z" fill="#0d2240" opacity="0.5"/>
+    
+    <!-- Moon / light reflection -->
+    <circle cx="72" cy="20" r="8" fill="#dff0ff" opacity="0.06"/>
+    <circle cx="72" cy="20" r="5" fill="#c8e8ff" opacity="0.04"/>
+  </g>
+</svg>

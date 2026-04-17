@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: anita-db
+    environment:
+      POSTGRES_DB: anita
+      POSTGRES_USER: anita
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-anita_secret}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U anita"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: anita-backend
+    environment:
+      DATABASE_URL: postgresql://anita:${DB_PASSWORD:-anita_secret}@postgres:5432/anita
+      JWT_SECRET: ${JWT_SECRET:-change_this_secret_in_production}
+      PORT: 4000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: anita-frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    restart: always
+
+volumes:
+  postgres_data:

@@ -1,0 +1,26 @@
+# Секреты (НИКОГДА не пушить в Git!)
+.env
+*.env.local
+
+# Зависимости
+node_modules/
+dist/
+build/
+
+# Docker
+docker-compose.override.yml
+
+# Логи и временные файлы
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+
+# Архивы нашего деплоя
+*.zip
+
+# VS Code
+.vscode/
+.idea/

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anita - Авторизация</title>
+  <link rel="stylesheet" href="index.css">
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+    .auth-box {
+      background: var(--bg-card);
+      padding: 40px;
+      border-radius: var(--r-card);
+      border: 1px solid var(--border);
+      max-width: 400px;
+      width: 90%;
+    }
+    .auth-box img {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 20px;
+      border-radius: 50%;
+      box-shadow: 0 0 30px rgba(91,168,224,0.15);
+    }
+    h1 {
+      font-family: var(--font-brand);
+      color: var(--foam);
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+    p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    #auth-error {
+      color: #ff6b6b;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    .loader {
+      margin-top: 20px;
+      display: none;
+      width: 24px;
+      height: 24px;
+      border: 3px solid var(--border);
+      border-top-color: var(--horizon);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="ambient"></div>
+  <div class="auth-box">
+    <img src="icon.svg" alt="Anita">
+    <h1>Добро пожаловать</h1>
+    <p id="auth-msg">Для доступа нужна персональная ссылка-приглашение. Если она у вас есть, перейдите по ней.</p>
+    <div id="auth-error"></div>
+    <div class="loader" id="loader"></div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const splitToken = urlParams.get('invite');
+    
+    if (splitToken) {
+      document.getElementById('auth-msg').textContent = 'Проверка приглашения...';
+      document.getElementById('loader').style.display = 'inline-block';
+      
+      fetch('/api/auth/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: splitToken })
+      })
+      .then(res => res.json().then(data => ({ status: res.status, body: data })))
+      .then(({ status, body }) => {
+        document.getElementById('loader').style.display = 'none';
+        if (status === 200 && body.token) {
+          localStorage.setItem('anita_jwt', body.token);
+          window.location.href = '/';
+        } else {
+          document.getElementById('auth-error').textContent = body.error || 'Ссылка недействительна или устарела';
+          document.getElementById('auth-msg').textContent = '';
+        }
+      })
+      .catch(err => {
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('auth-error').textContent = 'Ошибка сети';
+      });
+    }
+  </script>
+</body>
+</html>
