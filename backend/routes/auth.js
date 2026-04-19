@@ -126,6 +126,63 @@ router.post('/sessions/ping', requireAuth, async (req, res) => {
   }
 });
 
+// POST /api/sessions/heartbeat
+// Вызывается каждые 30 сек с фронта для поддержания активной сессии
+router.post('/sessions/heartbeat', requireAuth, async (req, res) => {
+  if (req.user.role !== 'user') return res.status(403).json({ error: 'Только для пользователей' });
+  const { sessionId } = req.body;
+  
+  if (!sessionId) return res.status(400).json({ error: 'Нет ID сессии' });
+
+  try {
+    // Обновить last_heartbeat сессии
+    const sessionRes = await db.query(
+      'UPDATE sessions SET last_heartbeat = NOW() WHERE id = $1 AND user_id = $2 RETURNING id',
+      [sessionId, req.user.userId]
+    );
+    
+    if (sessionRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Сессия не найдена' });
+    }
+
+    // Обновить last_seen пользователя и геолокацию
+    const { ip, country, country_code, city } = getGeoAndDevice(req);
+    await db.query(
+      `UPDATE users 
+       SET last_seen = NOW(), 
+           ip = COALESCE($2, ip), 
+           country = COALESCE($3, country), 
+           country_code = COALESCE($4, country_code), 
+           city = COALESCE($5, city) 
+       WHERE id = $1`, 
+      [req.user.userId, ip, country, country_code, city]
+    );
+
+    res.json({ success: true, heartbeat: new Date().toISOString() });
+  } catch (err) {
+    console.error('[Heartbeat Error]', err);
+    res.status(500).json({ error: 'Heartbeat error' });
+  }
+});
+
+// POST /api/sessions/logout
+// Явное завершение сессии пользователем
+router.post('/sessions/logout', requireAuth, async (req, res) => {
+  const { sessionId } = req.body;
+  try {
+    if (sessionId) {
+      await db.query(
+        'UPDATE sessions SET ended_at = NOW(), is_active = false, duration_seconds = EXTRACT(EPOCH FROM (NOW() - started_at)) WHERE id = $1 AND user_id = $2',
+        [sessionId, req.user.userId]
+      );
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Logout Error]', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // POST /api/sessions/end
 router.post('/sessions/end', requireAuth, async (req, res) => {
   if (req.user.role !== 'user') return res.status(403).json({ error: 'Только для пользователей' });

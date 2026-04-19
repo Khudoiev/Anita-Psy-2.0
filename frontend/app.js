@@ -3,6 +3,24 @@
  * v2.0 — Memory, Chat History, Extended Psychology
  */
 
+// ═══════════════════════════════════════════════════════════════
+// АРХИТЕКТУРА
+// ═══════════════════════════════════════════════════════════════
+// 
+// Монолитное приложение в одном файле. Слои:
+// 
+// 1. StorageManager     — localStorage (профиль, чаты, память)
+// 2. AIService          — запросы к /api/chat через бэк (JWT auth)
+// 3. MemoryManager      — извлечение фактов из диалогов
+// 4. AnitaApp           — координатор (UI + логика чатов)
+//
+// ⚠️  КРИТИЧНО:
+// - Никакого прямого API-ключа на фронте
+// - Все /api/chat запросы идут ТОЛЬКО через AIService
+// - Авторизация: JWT из localStorage + проверка на бэке
+//
+// ═══════════════════════════════════════════════════════════════
+
 // ─────────────────────────────────────────────
 // SYSTEM PROMPT — Extended Psychology Toolkit
 // ─────────────────────────────────────────────
@@ -104,6 +122,7 @@ const MEMORY_EXTRACT_PROMPT = `Ты — аналитический модуль 
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
+const CONFIG = {
   SPLASH_DURATION: 2800,
   API_URL: '/api/chat',
 };
@@ -174,6 +193,11 @@ class AIService {
     const profile = this.storage.getProfile();
     const profileLine = profile.name ? `\n\nИмя пользователя: ${profile.name}` : '';
     const memoryLine = memoryContext ? `\n\nКОНТЕКСТ ПАМЯТИ (факты из прошлых сессий):\n${memoryContext}` : '';
+
+    const allMessages = messages || [];
+    const turnNumber = Math.ceil(allMessages.length / 2) || 1;
+    const sessionLine = `\n\nSESSION_TURN: ${turnNumber}`;
+    const summaryHint = '';
 
     const systemText = SYSTEM_PROMPT + profileLine + memoryLine + sessionLine + summaryHint;
     
@@ -343,7 +367,6 @@ class AnitaApp {
       profileName: this.$('#profile-name'),
       profileSessions: this.$('#profile-sessions'),
       settingsModal: this.$('#settings-modal'),
-      apiKeyInput: this.$('#api-key-input'),
       userNameInput: this.$('#user-name-input'),
       showProgressToggle: this.$('#show-progress-toggle'),
       sessionProgress: this.$('#session-progress'),
@@ -381,31 +404,45 @@ class AnitaApp {
     .then(data => {
       if (data.sessionId) {
         this.sessionId = data.sessionId;
+        console.log(`[Session START] ID: ${this.sessionId}`);
         
-        setInterval(() => {
-          let messagesCount = 0;
-          if (this.currentChatId) {
-            const chat = this.storage.getChat(this.currentChatId);
-            if (chat) messagesCount = chat.messages.length;
-          }
-          fetch('/api/sessions/ping', {
+        // ✅ HEARTBEAT: пинг каждые 30 секунд для поддержания активной сессии
+        this.heartbeatInterval = setInterval(() => {
+          fetch('/api/sessions/heartbeat', {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: this.sessionId, messagesCount })
-          }).catch(console.error);
-        }, 60000);
+            headers: { 
+              'Authorization': `Bearer ${jwt}`, 
+              'Content-Type': 'application/json' 
+            },
+            body: JSON.stringify({ sessionId: this.sessionId })
+          })
+          .then(res => {
+            if (res.status === 401) {
+              console.warn('[Heartbeat] JWT expired, clearing token');
+              this.storage.clearToken();
+              clearInterval(this.heartbeatInterval);
+            }
+          })
+          .catch(err => console.error('[Heartbeat Error]', err));
+        }, 30000); // 30 секунд
 
+        // ✅ При закрытии вкладки/браузера: явно завершить сессию
         window.addEventListener('beforeunload', () => {
+          clearInterval(this.heartbeatInterval);
+          console.log(`[Session ENDING] User: ${this.sessionId}`);
           fetch('/api/sessions/end', {
             method: 'POST',
             keepalive: true,
-            headers: { 'Authorization': `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+            headers: { 
+              'Authorization': `Bearer ${jwt}`, 
+              'Content-Type': 'application/json' 
+            },
             body: JSON.stringify({ sessionId: this.sessionId })
           }).catch(console.error);
         });
       }
     })
-    .catch(console.error);
+    .catch(err => console.error('[Session Start Error]', err));
   }
 
   // ── Events ──
@@ -629,14 +666,6 @@ class AnitaApp {
     this.showTyping();
 
     try {
-      // Check API key
-      if (!this.ai._getApiKey()) {
-        this.hideTyping();
-        this.appendBubble('anita', 'Для работы мне нужен API ключ. Нажмите ⚙ в боковой панели, чтобы добавить его.');
-        this.isProcessing = false;
-        return;
-      }
-
       const memoryCtx = this.memory.getContextForPrompt();
       const response = await this.ai.chat(chat.messages, memoryCtx);
 

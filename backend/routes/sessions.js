@@ -76,13 +76,28 @@ router.get('/analytics/invites', async (req, res) => {
 });
 
 
-// Статистика сессий (существующий)
 router.get('/stats', async (req, res) => {
   try {
-    const onlineResult = await db.query("SELECT COUNT(*) FROM users WHERE last_seen > NOW() - INTERVAL '2 minutes' AND is_blocked = false");
-    const todayResult = await db.query("SELECT COUNT(DISTINCT user_id) FROM sessions WHERE started_at >= current_date");
-    const totalUsersResult = await db.query("SELECT COUNT(*) FROM users");
-    const durationResult = await db.query("SELECT COALESCE(SUM(duration_seconds), 0) as total_sec, AVG(duration_seconds) as avg_sec FROM sessions");
+    // ✅ Считать "онлайн" только тех, у кого был heartbeat в последние 2 минуты
+    const onlineResult = await db.query(`
+      SELECT COUNT(DISTINCT s.user_id) as count 
+      FROM sessions s
+      WHERE s.is_active = true 
+        AND s.last_heartbeat > NOW() - INTERVAL '2 minutes'
+    `);
+
+    const todayResult = await db.query(
+      "SELECT COUNT(DISTINCT user_id) as count FROM sessions WHERE started_at >= current_date"
+    );
+    
+    const totalUsersResult = await db.query("SELECT COUNT(*) as count FROM users");
+    
+    const durationResult = await db.query(
+      `SELECT 
+        COALESCE(SUM(duration_seconds), 0) as total_sec, 
+        AVG(duration_seconds) as avg_sec 
+       FROM sessions WHERE is_active = false`
+    );
 
     res.json({
       onlineNow: parseInt(onlineResult.rows[0].count),
@@ -141,7 +156,11 @@ router.get('/users', async (req, res) => {
         i.label as "inviteLabel",
         COUNT(s.id) as "totalSessions",
         COALESCE(SUM(s.duration_seconds), 0) / 3600.0 as "totalHours",
-        u.last_seen > NOW() - INTERVAL '2 minutes' as "isOnline"
+        -- ✅ Считать онлайн по активному heartbeat (последние 2 минуты), не по last_seen
+        EXISTS(
+          SELECT 1 FROM sessions 
+          WHERE user_id = u.id AND is_active = true AND last_heartbeat > NOW() - INTERVAL '2 minutes'
+        ) as "isOnline"
       FROM users u
       LEFT JOIN invites i ON u.invite_id = i.id
       LEFT JOIN sessions s ON u.id = s.user_id
