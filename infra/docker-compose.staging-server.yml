@@ -46,8 +46,8 @@ services:
       dockerfile: frontend/Dockerfile.staging-server
     container_name: anita-frontend-staging-srv
     ports:
-      - "80:80"
-      - "443:443"
+      - "8081:80"
+      - "4431:443"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt:ro
       - /var/www/certbot:/var/www/certbot:ro
