@@ -13,7 +13,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD_STAGING}
     volumes:
       - postgres_data_staging_srv:/var/lib/postgresql/data
-      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - ../backend/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U anita_staging"]
       interval: 5s
@@ -23,7 +23,7 @@ services:
 
   backend:
     build:
-      context: .
+      context: ..
       dockerfile: backend/Dockerfile
     container_name: anita-backend-staging-srv
     environment:
@@ -42,7 +42,7 @@ services:
 
   frontend:
     build:
-      context: .
+      context: ..
       dockerfile: frontend/Dockerfile.staging-server
     container_name: anita-frontend-staging-srv
     ports:
