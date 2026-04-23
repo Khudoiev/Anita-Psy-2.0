@@ -19,9 +19,11 @@ jobs:
           username: ${{ secrets.PROD_SSH_USER }}
           key:      ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
-            cd /home/aleks90715/Anita Production 2.1
+            cd ~/anita-psy
+            git fetch origin
             git checkout main
-            ./deploy.sh
+            git pull origin main
+            ./scripts/deploy.sh
 
       - name: Notify success
         if: success()

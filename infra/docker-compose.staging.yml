@@ -1,5 +1,5 @@
 # docker-compose.staging.yml
-# На staging сервере: docker-compose -f docker-compose.staging.yml up -d
+# Локальное staging окружение: docker-compose -f infra/docker-compose.staging.yml --env-file .env.staging up -d --build
 version: '3.8'
 
 services:
@@ -30,8 +30,11 @@ services:
       JWT_SECRET: ${JWT_SECRET_STAGING}
       GROK_API_KEY: ${GROK_API_KEY}
       DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY_STAGING}
-      PORT: 4001  # Отличается от prod (4000)
+      PORT: "4001"
       NODE_ENV: staging
+      FRONTEND_URL: http://localhost:8080
+    ports:
+      - "4001:4001"
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,14 +43,10 @@ services:
   frontend:
     build:
       context: ..
-      dockerfile: frontend/Dockerfile
+      dockerfile: frontend/Dockerfile.staging
     container_name: anita-frontend-staging
-    environment:
-      FRONTEND_URL: https://staging.anita-psy.com
     ports:
-      - "8080:80"  # Отличается от prod (80)
-    volumes:
-      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - "8080:80"
     depends_on:
       - backend
     restart: always
