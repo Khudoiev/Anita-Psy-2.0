@@ -2,4 +2,4 @@ FROM nginx:alpine
 COPY frontend/ /usr/share/nginx/html/
 COPY admin/ /usr/share/nginx/html/admin/
 COPY infra/nginx.staging-server.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80 443
+EXPOSE 80 8082
