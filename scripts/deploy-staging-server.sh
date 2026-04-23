@@ -1,6 +1,6 @@
 #!/bin/bash
-# deploy-staging-server.sh — деплой на серверный staging
-# Запускается на staging сервере (вручную или через GitHub Actions)
+# deploy-staging-server.sh — деплой на серверный staging (VPS)
+# Запускается на сервере вручную или через GitHub Actions
 # Использование: ./scripts/deploy-staging-server.sh
 
 set -e
@@ -10,13 +10,13 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${YELLOW}🧪 Деплоим на СЕРВЕРНЫЙ STAGING...${NC}"
+echo -e "${YELLOW}🧪 Деплоим СЕРВЕРНЫЙ STAGING...${NC}"
 
 # ─── Проверить что .env.staging.server существует ────────────────────────────
 
 if [ ! -f ".env.staging.server" ]; then
   echo -e "${RED}❌ Файл .env.staging.server не найден!${NC}"
-  echo -e "Создай его на сервере и заполни значения (см. документацию)"
+  echo -e "Создай его на сервере и заполни значения"
   exit 1
 fi
 
@@ -58,7 +58,7 @@ fi
 # ─── Health check API ────────────────────────────────────────────────────────
 
 sleep 3
-HEALTH=$(curl -s -o /dev/null -w "%{http_code}" https://staging.anita-psy.online/api/health 2>/dev/null || echo "000")
+HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api/health 2>/dev/null || echo "000")
 if [ "$HEALTH" = "200" ]; then
   echo -e "${GREEN}✅ API отвечает (HTTP 200)${NC}"
 else
@@ -69,12 +69,13 @@ fi
 
 COMMIT=$(git rev-parse --short HEAD)
 MSG=$(git log -1 --pretty=%B | head -1)
+SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo "34.140.213.8")
 
 echo ""
 echo -e "${GREEN}════════════════════════════════════════${NC}"
 echo -e "${GREEN}✅ Серверный staging обновлён!${NC}"
 echo -e "${GREEN}════════════════════════════════════════${NC}"
-echo -e "Коммит: ${COMMIT} — ${MSG}"
-echo -e "Сайт:   https://staging.anita-psy.online"
-echo -e "Admin:  https://staging.anita-psy.online/admin"
+echo -e "Коммит:  ${COMMIT} — ${MSG}"
+echo -e "Фронт:   http://${SERVER_IP}:8081"
+echo -e "Админка: http://${SERVER_IP}:8082"
 echo ""
