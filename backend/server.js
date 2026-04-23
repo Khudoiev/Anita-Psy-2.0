@@ -1,7 +1,10 @@
-require('dotenv').config();
+const path = require('path');
+// Загружаем .env из корня проекта (на случай запуска node server.js из папки backend/)
+require('dotenv').config({ path: path.join(__dirname, '../.env.local') }); // для локальной разработки
+require('dotenv').config();                                                  // для Docker (env передаётся через compose)
+
 const express = require('express');
 const cors    = require('cors');
-const path    = require('path');
 
 const authRoutes          = require('./routes/auth');
 const userSessionRoutes   = require('./routes/userSessions');
@@ -16,10 +19,15 @@ const checkBlacklist      = require('./middleware/checkBlacklist');
 const app = express();
 app.set('trust proxy', 1);
 
+// CORS: production — разрешаем фронт и админку (разные порты = разные origins)
+// staging/development — разрешаем всё (*)
+const _isProd = process.env.NODE_ENV === 'production';
+const _allowedOrigins = _isProd
+  ? [process.env.FRONTEND_URL, process.env.ADMIN_URL].filter(Boolean)
+  : null;
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' && process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL
-    : '*',
+  origin: _allowedOrigins && _allowedOrigins.length ? _allowedOrigins : '*',
 }));
 app.use(express.json());
 
