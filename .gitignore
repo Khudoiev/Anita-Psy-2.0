@@ -1,6 +1,8 @@
 # Секреты — НИКОГДА в git
 .env
 .env.local
+.env.staging
+.env.staging.server
 *.env.local
 .env.production
 
