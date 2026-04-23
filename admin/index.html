@@ -28,6 +28,7 @@
         <button class="nav-tab" data-tab="tab-geo">География</button>
         <button class="nav-tab" data-tab="tab-security">Безопасность</button>
         <button class="nav-tab" data-tab="tab-logs">Логи</button>
+        <button class="nav-tab" data-tab="tab-evolution">Эволюция</button>
       </nav>
       <button id="logout-btn">Выйти</button>
     </header>
@@ -50,6 +51,10 @@
         <div class="stat-card">
           <div class="stat-title">📊 Всего часов</div>
           <div class="stat-val" id="stat-hours">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-title">🔤 Токенов сегодня</div>
+          <div class="stat-val" id="stat-tokens">0</div>
         </div>
       </section>
 
@@ -190,6 +195,49 @@
           </table>
         </section>
       </div>
+      <!-- ТАБ: ЭВОЛЮЦИЯ СИСТЕМЫ -->
+      <div id="tab-evolution" class="tab-content">
+        <!-- Статистика техник -->
+        <section class="panel">
+          <h2>Статистика техник</h2>
+          <table id="technique-stats-table">
+            <thead>
+              <tr>
+                <th>Техника</th>
+                <th>Использований</th>
+                <th>Успешных</th>
+                <th>Провалов</th>
+                <th>% успеха</th>
+                <th>Ср. ход</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+
+        <!-- Предложения по улучшению -->
+        <section class="panel">
+          <h2>Предложения по улучшению промпта</h2>
+          <div id="suggestions-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+        </section>
+
+        <!-- Кризисные события -->
+        <section class="panel">
+          <h2>Кризисные события</h2>
+          <table id="crisis-table">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Пользователь</th>
+                <th>Фраза-триггер</th>
+                <th>Статус</th>
+                <th>Действие</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </section>
+      </div>
     </main>
   </div>
 
@@ -217,6 +265,10 @@
       <div class="ud-grid">
         <div class="ud-info">
           <p><strong>IP:</strong> <span id="ud-ip"></span> <a href="#" id="ud-ban-ip" style="color: red; margin-left:10px;">[Забанить IP]</a></p>
+          <div style="margin: 10px 0;">
+            <button id="ud-temp-ban" style="background:#ff9500;">Временный бан</button>
+            <button id="ud-unban" style="background:#34c759; margin-left:5px;">Разбанить + инвайт</button>
+          </div>
           <p><strong>Устройство:</strong> <span id="ud-device"></span></p>
           <p><strong>Браузер:</strong> <span id="ud-browser"></span></p>
           <p><strong>Страна:</strong> <span id="ud-country"></span></p>
@@ -228,7 +280,11 @@
           <ul id="ud-sessions-list"></ul>
         </div>
       </div>
-      <div class="modal-actions" style="margin-top: 15px;">
+      <div class="modal-actions" style="margin-top:15px; display:flex; justify-content:space-between;">
+        <div style="display:flex; gap:8px;">
+          <button id="ud-block-btn" style="background:#ff9500;">🔒 Заблокировать</button>
+          <button id="ud-delete-btn" style="background:#ff3b30; color:white;">🗑 Удалить</button>
+        </div>
         <button class="secondary close-modal-btn">Закрыть</button>
       </div>
     </div>

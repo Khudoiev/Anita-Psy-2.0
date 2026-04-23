@@ -4,12 +4,13 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: anita-db
+    env_file: .env
     environment:
       POSTGRES_DB: anita
       POSTGRES_USER: anita
       POSTGRES_PASSWORD: ${DB_PASSWORD:-anita_secret}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - anitapsy_postgres_data:/var/lib/postgresql/data
       - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     restart: always
     healthcheck:
@@ -21,12 +22,13 @@ services:
   backend:
     build:
       context: .
-      dockerfile: Dockerfile.backend
+      dockerfile: backend/Dockerfile
     container_name: anita-backend
+    env_file: .env
     environment:
       DATABASE_URL: postgresql://anita:${DB_PASSWORD:-anita_secret}@postgres:5432/anita
-      JWT_SECRET: ${JWT_SECRET:-change_this_secret_in_production}
       PORT: 4000
+      DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY}
     depends_on:
       postgres:
         condition: service_healthy
@@ -35,8 +37,9 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: frontend/Dockerfile
     container_name: anita-frontend
+    env_file: .env
     ports:
       - "80:80"
       - "443:443"
@@ -48,4 +51,5 @@ services:
     restart: always
 
 volumes:
-  postgres_data:
+  anitapsy_postgres_data:
+    external: true

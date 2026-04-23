@@ -88,6 +88,7 @@ ui.tabsNav.addEventListener('click', e => {
     if (tId === 'tab-geo') loadGeo();
     if (tId === 'tab-security') loadBlacklist();
     if (tId === 'tab-logs') loadLogs();
+    if (tId === 'tab-evolution') loadEvolution();
   }
 });
 
@@ -101,6 +102,14 @@ async function loadDashboard() {
     document.getElementById('stat-hours').textContent = stats.totalHours;
     loadInvites();
     loadUsers();
+    // Token stats (non-blocking)
+    apiCall('GET', '/admin/token-stats').then(rows => {
+      if (rows?.length) {
+        const today = rows[0];
+        document.getElementById('stat-tokens').textContent =
+          Number(today.total_all || 0).toLocaleString();
+      }
+    }).catch(() => {});
   } catch (e) { console.error(e); }
 }
 
@@ -152,11 +161,36 @@ function renderUsers() {
   });
 }
 
+// ─── Живой поиск по нику (с debounce) ───────────────────────────────────────
+let _searchTimeout = null;
+let _allUsersCache = []; // кэш полного списка
+
 async function loadUsers() {
   usersData = await apiCall('GET', '/admin/users');
+  _allUsersCache = [...usersData];
   renderUsers();
 }
-document.getElementById('user-search').addEventListener('input', renderUsers);
+
+document.getElementById('user-search').addEventListener('input', async e => {
+  const q = e.target.value.trim();
+  clearTimeout(_searchTimeout);
+
+  if (q.length === 0) {
+    usersData = [..._allUsersCache];
+    renderUsers();
+    return;
+  }
+  if (q.length < 2) return;
+
+  _searchTimeout = setTimeout(async () => {
+    try {
+      usersData = await apiCall('GET', `/admin/users/search?q=${encodeURIComponent(q)}`);
+      renderUsers();
+    } catch (err) {
+      console.error('[Search]', err);
+    }
+  }, 300);
+});
 
 // --- TABS DATA FETCH ---
 async function loadAnalytics() {
@@ -243,26 +277,66 @@ document.getElementById('copy-link-btn').addEventListener('click', () => {
 window.toggleInvite = async (id) => { await apiCall('PATCH', `/admin/invites/${id}/toggle`); loadInvites(); };
 window.deleteInvite = async (id) => { if(confirm('Удалить?')) { await apiCall('DELETE', `/admin/invites/${id}`); loadInvites(); } };
 
-// USER MODAL
+// ─── Блокировка / разблокировка ─────────────────────────────────────────────
+window.toggleBlockUser = async (id, isBlocked) => {
+  const action = isBlocked ? 'разблокировать' : 'заблокировать';
+  if (!confirm(`Вы уверены, что хотите ${action} этого пользователя?`)) return;
+  try {
+    const res = await apiCall('PATCH', `/admin/users/${id}/block`);
+    alert(res.is_blocked ? '🔒 Заблокирован' : '✅ Разблокирован');
+    loadUsers();
+  } catch (err) { alert('Ошибка: ' + err.message); }
+};
+
+// ─── Полное удаление ─────────────────────────────────────────────────────────
+window.deleteUser = async (id, nickname) => {
+  if (!confirm(`⚠️ Удалить "${nickname || id}" НАВСЕГДА?\nДействие необратимо.`)) return;
+  if (!confirm('Подтвержите ещё раз. Все данные будут удалены.')) return;
+  try {
+    await apiCall('DELETE', `/admin/users/${id}`);
+    alert('✅ Пользователь удалён');
+    ui.userDetailsModal.classList.remove('open');
+    loadUsers();
+  } catch (err) { alert('Ошибка: ' + err.message); }
+};
+
+// ─── Обновлённый openUserModal ────────────────────────────────────────────────
 window.openUserModal = async (id) => {
   currentUserId = id;
-  const user = usersData.find(u => u.id === parseInt(id) || u.id === id); // id depends on pg type
-  if(!user) return;
-  
-  document.getElementById('ud-id').textContent = `#${user.id}`;
-  document.getElementById('ud-ip').textContent = user.ip || '—';
-  document.getElementById('ud-device').textContent = user.device_type || '—';
+  const user = usersData.find(u => u.id === id || u.id === parseInt(id));
+  if (!user) return;
+
+  document.getElementById('ud-id').textContent      = `#${user.id}`;
+  document.getElementById('ud-ip').textContent      = user.ip || '—';
+  document.getElementById('ud-device').textContent  = user.device_type || '—';
   document.getElementById('ud-browser').textContent = user.browser || '—';
   document.getElementById('ud-country').textContent = user.country || '—';
-  document.getElementById('ud-note').value = user.admin_note || '';
-  
+  document.getElementById('ud-note').value          = user.admin_note || '';
+
+  // Динамическая кнопка блокировки
+  const blockBtn = document.getElementById('ud-block-btn');
+  if (blockBtn) {
+    blockBtn.textContent       = user.is_blocked ? '✅ Разблокировать' : '🔒 Заблокировать';
+    blockBtn.style.background  = user.is_blocked ? '#34c759' : '#ff9500';
+    blockBtn.onclick = () => toggleBlockUser(id, user.is_blocked);
+  }
+
+  const deleteBtn = document.getElementById('ud-delete-btn');
+  if (deleteBtn) {
+    deleteBtn.onclick = () => deleteUser(id, user.nickname);
+  }
+
   const sess = await apiCall('GET', `/admin/users/${id}/sessions`);
   const sl = document.getElementById('ud-sessions-list');
-  sl.innerHTML = '';
-  sess.forEach(s => {
-    sl.innerHTML += `<li>${new Date(s.started_at).toLocaleString()} - ${s.duration_seconds || 0}s [${s.messages_count} msgs]</li>`;
-  });
-  
+  sl.innerHTML = sess.length
+    ? sess.map(s => `<li>
+        ${new Date(s.started_at).toLocaleString()} —
+        ${s.duration_seconds ? Math.round(s.duration_seconds / 60) + ' мин' : 'активна'}
+        [${s.messages_count} сообщ.]
+        ${s.is_active ? '<span style="color:#34c759">● онлайн</span>' : ''}
+      </li>`).join('')
+    : '<li style="color:var(--text-muted)">Нет сессий</li>';
+
   ui.userDetailsModal.classList.add('open');
 };
 
@@ -283,10 +357,34 @@ document.getElementById('ud-ban-ip').addEventListener('click', async (e) => {
   }
 });
 
+document.getElementById('ud-temp-ban').addEventListener('click', async () => {
+  if (!currentUserId) return;
+  const reason = prompt('Причина временного бана:');
+  if (reason === null) return;
+  await apiCall('POST', `/admin/users/${currentUserId}/temp-ban`, { reason });
+  alert('Пользователь временно заблокирован');
+  loadUsers();
+});
+
+document.getElementById('ud-unban').addEventListener('click', async () => {
+  if (!currentUserId) return;
+  const label = prompt('Подпись для нового инвайта (необязательно):') || 'Повторный доступ';
+  const res = await apiCall('POST', `/admin/users/${currentUserId}/unban`, { label });
+  if (res.newLink) {
+    prompt('Новая инвайт-ссылка (скопируй):', res.newLink);
+  }
+  alert('Пользователь разбанен, новый инвайт создан');
+  loadUsers();
+});
+
 // EXPORT
-document.getElementById('export-users-btn').addEventListener('click', () => {
-  const token = localStorage.getItem('anita_admin_jwt');
-  window.open(`${API_BASE}/admin/users/export?token=${token}`, '_blank');
+document.getElementById('export-users-btn').addEventListener('click', async () => {
+  try {
+    const { downloadToken } = await apiCall('POST', '/admin/generate-download-token');
+    window.open(`${API_BASE}/admin/users/export?dt=${downloadToken}`, '_blank');
+  } catch (e) {
+    alert('Ошибка при получении токена для экспорта');
+  }
 });
 
 // BLACKLIST ACTIONS
@@ -299,6 +397,82 @@ document.getElementById('add-blacklist-btn').addEventListener('click', async () 
   loadBlacklist();
 });
 window.delBlacklist = async (id) => { if(confirm('Удалить?')) { await apiCall('DELETE', `/admin/blacklist/${id}`); loadBlacklist(); } };
+
+// ── EVOLUTION TAB ──────────────────────────────────────────────
+async function loadEvolution() {
+  // Technique stats
+  try {
+    const stats = await apiCall('GET', '/admin/evolution/technique-stats');
+    const tb = document.querySelector('#technique-stats-table tbody');
+    tb.innerHTML = '';
+    (stats || []).forEach(t => {
+      tb.innerHTML += `<tr>
+        <td>${t.technique_name}</td>
+        <td>${t.total_uses}</td>
+        <td style="color:#34c759">${t.positive_outcomes}</td>
+        <td style="color:#ff6b6b">${t.negative_outcomes}</td>
+        <td>${t.success_rate_pct ?? '—'}%</td>
+        <td>${t.avg_turn_used ? parseFloat(t.avg_turn_used).toFixed(1) : '—'}</td>
+      </tr>`;
+    });
+    if (!stats?.length) tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888">Нет данных</td></tr>';
+  } catch (e) { console.warn('technique-stats', e); }
+
+  // Suggestions
+  try {
+    const suggestions = await apiCall('GET', '/admin/evolution/suggestions');
+    const container = document.getElementById('suggestions-list');
+    container.innerHTML = '';
+    (suggestions || []).forEach(s => {
+      const card = document.createElement('div');
+      card.style.cssText = 'background:var(--bg-secondary,#1a2740);border-radius:8px;padding:16px;border:1px solid #2a3a5a;';
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <strong style="color:#5ba8e0">${s.suggestion_type || ''}</strong>
+          <span style="font-size:11px;padding:2px 8px;border-radius:12px;background:#2a3a5a">${s.status}</span>
+        </div>
+        <p style="margin:4px 0;font-size:13px;color:#aaa"><strong>Обоснование:</strong> ${s.reasoning}</p>
+        <p style="margin:4px 0;font-size:13px;color:#aaa"><strong>Ожидаемый эффект:</strong> ${s.expected_benefit}</p>
+        ${s.potential_risks ? `<p style="margin:4px 0;font-size:12px;color:#888"><strong>Риски:</strong> ${s.potential_risks}</p>` : ''}
+        ${s.status === 'pending' ? `<div style="margin-top:10px;display:flex;gap:8px;">
+          <button onclick="updateSuggestion('${s.id}','approved')" style="background:#34c759">✅ Применить</button>
+          <button onclick="updateSuggestion('${s.id}','rejected')" style="background:#ff6b6b">❌ Отклонить</button>
+          <button onclick="updateSuggestion('${s.id}','testing')" style="background:#ff9500">🧪 Тестировать</button>
+        </div>` : ''}
+      `;
+      container.appendChild(card);
+    });
+    if (!suggestions?.length) container.innerHTML = '<p style="color:#888;text-align:center">Нет предложений</p>';
+  } catch (e) { console.warn('suggestions', e); }
+
+  // Crisis events
+  try {
+    const crises = await apiCall('GET', '/admin/evolution/crisis-events');
+    const tb = document.querySelector('#crisis-table tbody');
+    tb.innerHTML = '';
+    (crises || []).forEach(c => {
+      const reviewed = c.reviewed_at;
+      tb.innerHTML += `<tr>
+        <td>${new Date(c.created_at).toLocaleString()}</td>
+        <td>${c.nickname || c.user_id?.slice(0,8) || '—'}</td>
+        <td style="max-width:300px;white-space:normal">${c.trigger_phrase || '—'}</td>
+        <td>${reviewed ? '<span style="color:#34c759">Проверено</span>' : '<span style="color:#ff9500">Ожидает</span>'}</td>
+        <td>${!reviewed ? `<button onclick="reviewCrisis('${c.id}')" class="secondary">Отметить</button>` : ''}</td>
+      </tr>`;
+    });
+    if (!crises?.length) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888">Нет событий</td></tr>';
+  } catch (e) { console.warn('crisis-events', e); }
+}
+
+window.updateSuggestion = async (id, status) => {
+  await apiCall('PATCH', `/admin/evolution/suggestions/${id}`, { status });
+  loadEvolution();
+};
+
+window.reviewCrisis = async (id) => {
+  await apiCall('PATCH', `/admin/evolution/crisis-events/${id}/review`);
+  loadEvolution();
+};
 
 setInterval(() => {
   if (ui.dashboardScreen.style.display === 'block') loadDashboard();

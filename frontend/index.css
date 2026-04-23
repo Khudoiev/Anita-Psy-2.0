@@ -434,6 +434,16 @@ textarea { font-family: inherit; }
   background: rgba(255,255,255,0.06); color: var(--text-primary);
 }
 
+.sidebar-auth-links { margin-top: 4px; }
+.auth-link {
+  font-size: 11px;
+  color: var(--horizon);
+  text-decoration: none;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+.auth-link:hover { opacity: 1; text-decoration: underline; }
+
 /* =============================================
    MAIN PANEL
    ============================================= */
@@ -740,11 +750,18 @@ input:checked + .slider:before {
    AMBIENT BACKGROUND
    ============================================= */
 .ambient {
-  position: fixed; top: -30%; left: -20%;
-  width: 140%; height: 60%;
-  background: radial-gradient(ellipse at center, rgba(26,90,154,0.04) 0%, transparent 70%);
+  position: fixed; top: -20%; left: -10%;
+  width: 120%; height: 50%;
+  /* Smoother gradient using more stops to prevent banding */
+  background: radial-gradient(
+    ellipse at center,
+    rgba(26,90,154,0.06) 0%,
+    rgba(26,90,154,0.03) 30%,
+    rgba(26,90,154,0.01) 60%,
+    transparent 80%
+  );
   pointer-events: none; z-index: 0;
-  animation: ambientMove 20s ease-in-out infinite alternate;
+  animation: ambientMove 25s ease-in-out infinite alternate;
 }
 @keyframes ambientMove {
   0% { transform: translate(0,0) scale(1); }

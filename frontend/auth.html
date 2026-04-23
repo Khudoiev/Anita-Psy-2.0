@@ -3,59 +3,78 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Anita - Авторизация</title>
+  <title>Anita - Вход</title>
   <link rel="stylesheet" href="index.css">
   <style>
     body {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      text-align: center;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      min-height: 100vh; text-align: center;
     }
     .auth-box {
       background: var(--bg-card);
       padding: 40px;
       border-radius: var(--r-card);
       border: 1px solid var(--border);
-      max-width: 400px;
-      width: 90%;
+      max-width: 420px; width: 90%;
     }
-    .auth-box img {
-      width: 80px;
-      height: 80px;
-      margin-bottom: 20px;
-      border-radius: 50%;
-      box-shadow: 0 0 30px rgba(91,168,224,0.15);
+    .auth-box img { width: 72px; height: 72px; border-radius: 50%; margin-bottom: 20px; }
+    h1 { font-family: var(--font-brand); color: var(--foam); font-size: 24px; margin-bottom: 6px; }
+    .subtitle { color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; }
+
+    .auth-tabs {
+      display: flex; gap: 0; margin-bottom: 24px;
+      border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
     }
-    h1 {
-      font-family: var(--font-brand);
-      color: var(--foam);
-      font-size: 24px;
-      margin-bottom: 10px;
+    .auth-tab {
+      flex: 1; padding: 10px; background: none; border: none;
+      color: var(--text-secondary); font-size: 14px; cursor: pointer;
+      transition: background 0.2s, color 0.2s;
     }
-    p {
-      color: var(--text-secondary);
-      font-size: 14px;
-      line-height: 1.5;
+    .auth-tab.active {
+      background: var(--wave); color: var(--white); font-weight: 500;
     }
-    #auth-error {
-      color: #ff6b6b;
-      margin-top: 15px;
-      font-size: 14px;
+
+    .auth-form { display: none; }
+    .auth-form.active { display: block; }
+
+    .field { margin-bottom: 14px; text-align: left; }
+    .field label { display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
+    .field input {
+      width: 100%; padding: 10px 14px; box-sizing: border-box;
+      background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--foam); font-size: 14px; outline: none;
+      transition: border-color 0.2s;
     }
+    .field input:focus { border-color: var(--wave); }
+
+    .btn-primary {
+      width: 100%; padding: 12px; margin-top: 8px;
+      background: var(--wave); color: var(--white);
+      border: none; border-radius: 10px; font-size: 15px; font-weight: 500;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .btn-primary:hover { background: var(--horizon); }
+
+    .error-msg { color: #ff6b6b; font-size: 13px; margin-top: 10px; min-height: 18px; }
+    .success-msg { color: #34c759; font-size: 13px; margin-top: 10px; }
+
+    .hint {
+      font-size: 12px; color: var(--text-muted);
+      margin-top: 16px; line-height: 1.5;
+    }
+    .hint a { color: var(--horizon); text-decoration: none; cursor: pointer; }
+
     .loader {
-      margin-top: 20px;
-      display: none;
-      width: 24px;
-      height: 24px;
-      border: 3px solid var(--border);
-      border-top-color: var(--horizon);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
+      display: none; width: 22px; height: 22px; margin: 12px auto 0;
+      border: 3px solid var(--border); border-top-color: var(--horizon);
+      border-radius: 50%; animation: spin 1s linear infinite;
     }
     @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* Анимация переключения */
+    .auth-form { animation: fadeIn 0.25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
   </style>
 </head>
 <body>
@@ -63,40 +82,394 @@
   <div class="auth-box">
     <img src="icon.svg" alt="Anita">
     <h1>Добро пожаловать</h1>
-    <p id="auth-msg">Для доступа нужна персональная ссылка-приглашение. Если она у вас есть, перейдите по ней.</p>
-    <div id="auth-error"></div>
-    <div class="loader" id="loader"></div>
+    <p class="subtitle" id="subtitle">Войди или создай аккаунт</p>
+
+    <div class="auth-tabs" id="auth-tabs">
+      <button class="auth-tab active" data-tab="login">Войти</button>
+      <button class="auth-tab" data-tab="register">Регистрация</button>
+      <button class="auth-tab" data-tab="invite">Инвайт</button>
+      <button class="auth-tab" data-tab="reset">Забыл пароль</button>
+    </div>
+
+    <!-- ВХОД -->
+    <div class="auth-form active" id="form-login">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="login-username" placeholder="твой_username" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Пароль</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn-primary" id="btn-login">Войти</button>
+      <div class="error-msg" id="login-error"></div>
+      <div class="loader" id="login-loader"></div>
+      <p class="hint">Нет аккаунта? <a onclick="switchTab('register')">Зарегистрироваться</a></p>
+    </div>
+
+    <!-- РЕГИСТРАЦИЯ (только с инвайтом) -->
+    <div class="auth-form" id="form-register">
+      <div class="field">
+        <label>Придумай username <span style="color:var(--text-muted)">(только латиница, цифры, _)</span></label>
+        <input type="text" id="reg-username" placeholder="my_username" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Пароль <span style="color:var(--text-muted)">(мин. 8 символов)</span></label>
+        <input type="password" id="reg-password" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label>Повтори пароль</label>
+        <input type="password" id="reg-password2" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label>Секретный вопрос <span style="color:var(--text-muted)">(для восстановления)</span></label>
+        <input type="text" id="reg-secret-q" placeholder="Например: любимый фильм детства">
+      </div>
+      <div class="field">
+        <label>Ответ на секретный вопрос</label>
+        <input type="text" id="reg-secret-a" placeholder="Ответ (регистр не важен)">
+      </div>
+      <button class="btn-primary" id="btn-register">Создать аккаунт</button>
+      <div class="error-msg" id="register-error"></div>
+      <div class="loader" id="register-loader"></div>
+      <p class="hint" style="color:var(--text-muted)">
+        ⚠️ Запомни username и пароль. Восстановление только через администратора — email не требуется, анонимность сохранена.
+      </p>
+    </div>
+
+    <!-- ИНВАЙТ (ручной ввод) -->
+    <div class="auth-form" id="form-invite">
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+        Введи код приглашения, чтобы начать:
+      </p>
+      <div class="field">
+        <label>Код инвайта</label>
+        <input type="text" id="manual-invite-token" placeholder="599fd371ab23...">
+      </div>
+      <button class="btn-primary" id="btn-check-invite">Подтвердить</button>
+      <div class="error-msg" id="invite-error"></div>
+      <div class="loader" id="invite-loader"></div>
+    </div>
+
+    <!-- СБРОС ПАРОЛЯ -->
+    <div class="auth-form" id="form-reset">
+      <div id="reset-step1">
+        <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;line-height:1.5;">
+          Заполни форму — администратор рассмотрит запрос и пришлёт тебе ссылку для сброса пароля.
+        </p>
+        <div class="field">
+          <label>Твой username</label>
+          <input type="text" id="reset-username" placeholder="my_username">
+        </div>
+        <div class="field">
+          <label>Как с тобой связаться <span style="color:var(--text-muted)">(необязательно)</span></label>
+          <input type="text" id="reset-contact" placeholder="Telegram, email или другой способ">
+        </div>
+        <div class="field">
+          <label>Почему ты это ты <span style="color:var(--text-muted)">(чтобы подтвердить личность)</span></label>
+          <input type="text" id="reset-reason" placeholder="Ответ на секретный вопрос или другие детали">
+        </div>
+        <button class="btn-primary" id="btn-reset">Отправить запрос</button>
+        <div class="error-msg" id="reset-error"></div>
+        <div class="loader" id="reset-loader"></div>
+      </div>
+      <div id="reset-step2" style="display:none;">
+        <div style="font-size:48px;margin-bottom:12px;">📬</div>
+        <div class="success-msg" style="font-size:14px;">Запрос отправлен!</div>
+        <p class="hint">Администратор рассмотрит его и свяжется с тобой способом, который ты указал.</p>
+      </div>
+    </div>
+
+    <!-- ФОРМА ДЛЯ ТОКЕНА СБРОСА (если пришли с ?reset_token=...) -->
+    <div class="auth-form" id="form-new-password" style="display:none;">
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;">
+        Придумай новый пароль:
+      </p>
+      <div class="field">
+        <label>Новый пароль</label>
+        <input type="password" id="new-password" placeholder="мин. 8 символов" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label>Повтори пароль</label>
+        <input type="password" id="new-password2" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <button class="btn-primary" id="btn-new-password">Сохранить пароль</button>
+      <div class="error-msg" id="new-password-error"></div>
+      <div class="loader" id="new-password-loader"></div>
+    </div>
+    <!-- CONSENT MODAL -->
+    <div id="consent-modal" style="display:none;">
+      <h2 style="color:var(--foam);font-family:var(--font-brand);margin-bottom:12px;">Прежде чем начать</h2>
+      <p style="color:var(--text-secondary);font-size:13px;margin-bottom:16px;line-height:1.5;">
+        Пожалуйста, ознакомься с
+        <a href="/terms.html" target="_blank" style="color:var(--horizon);">Условиями использования</a>
+      </p>
+
+      <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;cursor:pointer;text-align:left;">
+        <input type="checkbox" id="consent-terms" style="margin-top:2px;flex-shrink:0;">
+        <span style="color:var(--text-secondary);font-size:13px;line-height:1.5;">
+          Я принимаю условия использования и понимаю, как хранятся мои данные *
+        </span>
+      </label>
+
+      <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:20px;cursor:pointer;text-align:left;">
+        <input type="checkbox" id="consent-improvement" style="margin-top:2px;flex-shrink:0;">
+        <span style="color:var(--text-secondary);font-size:13px;line-height:1.5;">
+          Я согласен(а), что мои анонимизированные разговоры могут использоваться для улучшения системы (необязательно)
+        </span>
+      </label>
+
+      <button class="btn-primary" id="consent-accept" disabled>Начать →</button>
+      <div class="error-msg" id="consent-error"></div>
+    </div>
   </div>
 
   <script>
+    const API = '/api';
+
+    // ── Определяем режим по URL ──────────────────────────────
     const urlParams = new URLSearchParams(window.location.search);
-    const splitToken = urlParams.get('invite');
-    
-    if (splitToken) {
-      document.getElementById('auth-msg').textContent = 'Проверка приглашения...';
-      document.getElementById('loader').style.display = 'inline-block';
-      
-      fetch('/api/auth/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: splitToken })
-      })
-      .then(res => res.json().then(data => ({ status: res.status, body: data })))
-      .then(({ status, body }) => {
-        document.getElementById('loader').style.display = 'none';
-        if (status === 200 && body.token) {
-          localStorage.setItem('anita_jwt', body.token);
-          window.location.href = '/';
-        } else {
-          document.getElementById('auth-error').textContent = body.error || 'Ссылка недействительна или устарела';
-          document.getElementById('auth-msg').textContent = '';
-        }
-      })
-      .catch(err => {
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('auth-error').textContent = 'Ошибка сети';
-      });
+    const inviteToken = urlParams.get('invite');
+    const resetToken  = urlParams.get('reset_token');
+
+    // Если пришли с invite — сначала создаём анонимную учётку, потом предлагаем зарегистрироваться
+    if (inviteToken) {
+      handleInvite(inviteToken);
     }
+    // Если пришли с reset_token — показываем форму нового пароля
+    if (resetToken) {
+      showResetPasswordForm();
+    }
+
+    // ── Переключение табов ───────────────────────────────────
+    function switchTab(tab) {
+      document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+      const tabEl = document.querySelector(`[data-tab="${tab}"]`);
+      const formEl = document.getElementById(`form-${tab}`);
+      if (tabEl) tabEl.classList.add('active');
+      if (formEl) { formEl.classList.add('active'); formEl.style.display = ''; }
+    }
+
+    document.querySelectorAll('.auth-tab').forEach(t => {
+      t.addEventListener('click', () => switchTab(t.dataset.tab));
+    });
+
+    // ── Consent modal ─────────────────────────────────────────
+    let pendingJwt = null;
+
+    document.getElementById('consent-terms').addEventListener('change', () => {
+      document.getElementById('consent-accept').disabled =
+        !document.getElementById('consent-terms').checked;
+    });
+
+    document.getElementById('consent-accept').addEventListener('click', async () => {
+      if (!pendingJwt) return;
+      const aiImprovement = document.getElementById('consent-improvement').checked;
+      const err = document.getElementById('consent-error');
+      err.textContent = '';
+
+      try {
+        await fetch(`${API}/auth/save-consent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${pendingJwt}` },
+          body: JSON.stringify({ termsVersion: '1.0', dataProcessing: true, aiImprovement })
+        });
+      } catch (e) { /* non-blocking */ }
+
+      localStorage.setItem('anita_jwt', pendingJwt);
+      window.location.href = '/';
+    });
+
+    function showConsentModal(jwt) {
+      pendingJwt = jwt;
+      document.getElementById('auth-tabs').style.display = 'none';
+      document.querySelectorAll('.auth-form').forEach(f => { f.style.display = 'none'; f.classList.remove('active'); });
+      document.getElementById('consent-modal').style.display = 'block';
+      document.getElementById('subtitle').textContent = 'Почти готово!';
+    }
+
+    // ── Инвайт ───────────────────────────────────────────────
+    async function handleInvite(token) {
+      document.getElementById('subtitle').textContent = 'Проверка приглашения...';
+      document.getElementById('auth-tabs').style.display = 'none';
+      document.querySelectorAll('.auth-form').forEach(f => f.style.display = 'none');
+
+      try {
+        const res  = await fetch(`${API}/auth/join`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          document.getElementById('subtitle').textContent = data.error || 'Ссылка недействительна';
+          return;
+        }
+
+        // Show consent before saving JWT and redirecting
+        showConsentModal(data.token);
+
+      } catch (e) {
+        document.getElementById('subtitle').textContent = 'Ошибка сети';
+      }
+    }
+
+    function goToChat() { window.location.href = '/'; }
+
+    // ── Логин ─────────────────────────────────────────────────
+    document.getElementById('btn-login').addEventListener('click', async () => {
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value;
+      const err      = document.getElementById('login-error');
+      const loader   = document.getElementById('login-loader');
+      err.textContent = '';
+
+      if (!username || !password) { err.textContent = 'Заполни все поля'; return; }
+
+      loader.style.display = 'block';
+      try {
+        const res  = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        loader.style.display = 'none';
+        if (!res.ok) { err.textContent = data.message || data.error; err.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+        localStorage.setItem('anita_jwt', data.token);
+        if (data.username) localStorage.setItem('anita_profile', JSON.stringify({ name: data.username, showProgress: true }));
+        window.location.href = '/';
+      } catch(e) {
+        loader.style.display = 'none';
+        err.textContent = 'Ошибка сети';
+        err.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+
+    // ── Регистрация ───────────────────────────────────────────
+    document.getElementById('btn-register').addEventListener('click', async () => {
+      const username = document.getElementById('reg-username').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const password2= document.getElementById('reg-password2').value;
+      const secretQ  = document.getElementById('reg-secret-q').value.trim();
+      const secretA  = document.getElementById('reg-secret-a').value.trim();
+      const err      = document.getElementById('register-error');
+      const loader   = document.getElementById('register-loader');
+      err.textContent = '';
+
+      if (!username || !password || !secretQ || !secretA) { err.textContent = 'Заполни все поля'; return; }
+      if (password !== password2) { err.textContent = 'Пароли не совпадают'; return; }
+      if (password.length < 8) { err.textContent = 'Пароль минимум 8 символов'; return; }
+
+      const jwt = localStorage.getItem('anita_jwt');
+      if (!jwt) { err.textContent = 'Сначала войди по инвайт-ссылке'; return; }
+
+      loader.style.display = 'block';
+      try {
+        const res  = await fetch(`${API}/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
+          body: JSON.stringify({ username, password, secretQuestion: secretQ, secretAnswer: secretA })
+        });
+        const data = await res.json();
+        loader.style.display = 'none';
+        if (!res.ok) { err.textContent = data.message || data.error; err.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+        localStorage.setItem('anita_jwt', data.token);
+        if (data.username) localStorage.setItem('anita_profile', JSON.stringify({ name: data.username, showProgress: true }));
+        window.location.href = '/';
+      } catch(e) {
+        loader.style.display = 'none';
+        err.textContent = 'Ошибка сети';
+        err.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    });
+
+    // ── Запрос сброса пароля ──────────────────────────────────
+    document.getElementById('btn-reset').addEventListener('click', async () => {
+      const username = document.getElementById('reset-username').value.trim();
+      const contact  = document.getElementById('reset-contact').value.trim();
+      const reason   = document.getElementById('reset-reason').value.trim();
+      const err      = document.getElementById('reset-error');
+      const loader   = document.getElementById('reset-loader');
+      err.textContent = '';
+
+      if (!username) { err.textContent = 'Укажи username'; return; }
+
+      loader.style.display = 'block';
+      try {
+        const res = await fetch(`${API}/auth/reset-request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, contactHint: contact, reason })
+        });
+        loader.style.display = 'none';
+        document.getElementById('reset-step1').style.display = 'none';
+        document.getElementById('reset-step2').style.display = 'block';
+      } catch(e) {
+        loader.style.display = 'none';
+        err.textContent = 'Ошибка сети';
+      }
+    });
+
+    // ── Форма нового пароля (по токену от админа) ─────────────
+    function showResetPasswordForm() {
+      document.getElementById('auth-tabs').style.display = 'none';
+      document.querySelectorAll('.auth-form').forEach(f => { f.style.display = 'none'; f.classList.remove('active'); });
+      document.getElementById('subtitle').textContent = 'Создай новый пароль';
+      const f = document.getElementById('form-new-password');
+      f.style.display = 'block';
+      f.classList.add('active');
+    }
+
+    document.getElementById('btn-new-password').addEventListener('click', async () => {
+      const newPwd  = document.getElementById('new-password').value;
+      const newPwd2 = document.getElementById('new-password2').value;
+      const err     = document.getElementById('new-password-error');
+      const loader  = document.getElementById('new-password-loader');
+      err.textContent = '';
+
+      if (newPwd.length < 8) { err.textContent = 'Пароль минимум 8 символов'; return; }
+      if (newPwd !== newPwd2) { err.textContent = 'Пароли не совпадают'; return; }
+
+      loader.style.display = 'block';
+      try {
+        const res  = await fetch(`${API}/auth/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resetToken, newPassword: newPwd })
+        });
+        const data = await res.json();
+        loader.style.display = 'none';
+        if (!res.ok) { err.textContent = data.message || data.error; err.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+        // Успех — идём на логин
+        err.style.color = '#34c759';
+        err.textContent = 'Пароль изменён! Перехожу на страницу входа...';
+        setTimeout(() => {
+          window.location.href = '/auth.html';
+        }, 2000);
+      } catch(e) {
+        loader.style.display = 'none';
+        err.textContent = 'Ошибка сети';
+      }
+    });
+
+    // ── Ручной ввод инвайта ──────────────────────────────────
+    document.getElementById('btn-check-invite').addEventListener('click', () => {
+      const token = document.getElementById('manual-invite-token').value.trim();
+      if (token) handleInvite(token);
+      else document.getElementById('invite-error').textContent = 'Введи код';
+    });
+
+    // ── Enter в полях ─────────────────────────────────────────
+    document.getElementById('login-password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('btn-login').click();
+    });
+    ['reg-username','reg-password','reg-password2','reg-secret-q','reg-secret-a'].forEach(id => {
+      document.getElementById(id).addEventListener('keydown', e => {
+        if (e.key === 'Enter') document.getElementById('btn-register').click();
+      });
+    });
   </script>
 </body>
 </html>

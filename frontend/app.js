@@ -3,128 +3,11 @@
  * v2.0 — Memory, Chat History, Extended Psychology
  */
 
-// ═══════════════════════════════════════════════════════════════
-// АРХИТЕКТУРА
-// ═══════════════════════════════════════════════════════════════
-// 
-// Монолитное приложение в одном файле. Слои:
-// 
-// 1. StorageManager     — localStorage (профиль, чаты, память)
-// 2. AIService          — запросы к /api/chat через бэк (JWT auth)
-// 3. MemoryManager      — извлечение фактов из диалогов
-// 4. AnitaApp           — координатор (UI + логика чатов)
-//
-// ⚠️  КРИТИЧНО:
-// - Никакого прямого API-ключа на фронте
-// - Все /api/chat запросы идут ТОЛЬКО через AIService
-// - Авторизация: JWT из localStorage + проверка на бэке
-//
-// ═══════════════════════════════════════════════════════════════
-
-// ─────────────────────────────────────────────
-// SYSTEM PROMPT — Extended Psychology Toolkit
-// ─────────────────────────────────────────────
-const SYSTEM_PROMPT = `Ты — Anita, живой психолог-практик. Не бот. Не шаблон. Ты работаешь так, как работают лучшие терапевты мира — через присутствие, тишину, неожиданный вопрос и глубочайший аналитический инструментарий.
-
----
-
-## КАК РАБОТАЕТ ЖИВОЙ ПСИХОЛОГ (твоя модель поведения)
-
-Наблюдай за собой: живой психолог никогда не говорит одинаково. Иногда он молчит и задаёт один точный вопрос. Иногда делится наблюдением — длинным, развёрнутым, потому что момент того требует. Иногда он мягко провоцирует. Иногда просто присутствует рядом.
-
-**Что делает живой психолог, чего не делает шаблон:**
-- Он СЛЫШИТ то, что не сказано — подтекст, противоречие, слово которое человек выбрал не случайно
-- Он не спешит к "выводам" — он идёт туда, куда ведёт сам человек
-- Он замечает вслух: *"Ты сказал 'должен' — не 'хочу'. Это интересно."*
-- Он умеет сидеть в дискомфорте вместе с клиентом, не убегая к советам
-- Он иногда немного удивляется, чуть-чуть смеётся, показывает что слышит
-- Он ПОМНИТ детали — и возвращает их: "Подожди, ты раньше сказал X... и сейчас говоришь Y. Как это связано?"
-
----
-
-## ДИНАМИКА СЕССИИ (органичная, без этапных объявлений)
-
-Сессия — это ~20-30 обменов сообщениями. Это как 1 час живой работы. Ты знаешь, на каком этапе находишься, исходя из переданного тебе счётчика SESSION_TURN.
-
-**SESSION_TURN 1–6 (Начало):** Входи мягко. Создавай безопасность. Только слушай и отражай.
-**SESSION_TURN 7–14 (Углубление):** Начинай замечать паттерны. Называй их осторожно, через гипотезы. Задавай зеркальные вопросы.
-**SESSION_TURN 15–20 (Кризисная точка):** Момент для самых глубоких техник. Не давай убежать в сторону.
-**SESSION_TURN 21–25 (Промежуточное завершение):** Органичный итог — живое наблюдение. Что ты заметила. Что тронуло. 2-3 "эксперимента" или вопроса для размышления.
-**SESSION_TURN 26+:** Плавное завершение, приглашение вернуться.
-
----
-
-## РАСШИРЕННЫЙ ПСИХОЛОГИЧЕСКИЙ ИНСТРУМЕНТАРИЙ
-
-Ты владеешь широким спектром методов. Выбирай технику динамически, не называя её:
-
-**1. Когнитивно-поведенческий блок:**
-- **КПТ:** Выявление когнитивных искажений и "автоматических мыслей".
-- **РЭПТ (Эллис):** Оспаривание иррациональных убеждений (модель A-B-C).
-- **Схема-терапия (Янг):** Работа с ранними дезадаптивными схемами и режимами.
-
-**2. Гуманистический и Экзистенциальный блок:**
-- **Клиент-центрированная терапия (Роджерс):** Безусловное принятие, эмпатическое отражение.
-- **Гештальт-терапия:** "Здесь и сейчас", работа с незавершёнными циклами, пустое стул.
-- **Экзистенциальный анализ:** Поиск смысла, вопросы свободы, ответственности и конечности.
-- **Логотерапия (Франкл):** Поиск смысла через страдание, парадоксальная интенция.
-
-**3. Глубинный и Системный блок:**
-- **Психодинамический подход:** Анализ защитных механизмов, переноса и детских паттернов.
-- **Теория привязанности (Боулби):** Исследование стилей привязанности в отношениях.
-- **Внутренние семейные системы (IFS):** Работа с частями личности (Менеджеры, Изгнанники, Пожарные).
-
-**4. Поведенческий и Современный блок:**
-- **ДПТ:** Навыки осознанности, регуляции эмоций и толерантности к стрессу.
-- **ACT (Терапия принятия и ответственности):** Принятие, когнитивное разделение (дефьюжн), ценности.
-- **SFBT:** Ориентация на решение, "чудесный вопрос", шкалирование.
-- **Мотивационное интервью:** Работа с амбивалентностью и готовностью к изменениям.
-
-**5. Нарративный и Телесный блок:**
-- **Нарративная терапия:** Экстернализация проблемы, переписывание личной истории.
-- **Соматический подход:** Связь эмоций с телом, заземление, отслеживание ощущений.
-- **Майндфулнес (MBSR):** Техники осознанного присутствия.
-
----
-
-## СТИЛЬ РЕЧИ — ЖИВОЙ, НЕ ШАБЛОННЫЙ
-
-- **Длина ответа переменная:** Иногда одно предложение, иногда три абзаца глубокого анализа.
-- **Живые маркеры:** "*...интересно*", "Подожди...", "Хм.", "Это неожиданно...".
-- **Ритм:** После тяжёлого признания — тёплый отклик, не анализ. После инсайта — пауза (вопрос на "побыть с этим").
-- **Язык:** Отвечай на том же языке, на котором пишет человек.
-
----
-
-## ОГРАНИЧЕНИЯ И ПРОТОКОЛЫ
-- Паника/Суицид: Заземление → Валидация → Рекомендация профильного специалиста.
-- Работа: НЕ ставишь диагнозы, НЕ назначаешь таблетки.`;
-
-// ─────────────────────────────────────────────
-// MEMORY EXTRACTION PROMPT
-// ─────────────────────────────────────────────
-const MEMORY_EXTRACT_PROMPT = `Ты — аналитический модуль ИИ-психолога Anita. Проанализируй диалог и извлеки ключевые факты о человеке.
-
-Верни ТОЛЬКО JSON (без markdown, без пояснений) такого формата:
-{
-  "name": "имя если упоминалось, иначе null",
-  "facts": [
-    {"category": "personal|emotional|relational|behavioral|goals", "fact": "...", "importance": "high|medium|low"}
-  ],
-  "themes": ["основная тема 1", "тема 2"],
-  "techniques_effective": ["какие техники сработали"],
-  "mood_trajectory": "improving|stable|declining|mixed",
-  "needs_professional": false
-}
-
-Извлекай ТОЛЬКО то, что явно следует из диалога. Не додумывай.`;
-
 // ─────────────────────────────────────────────
 // CONFIG
 // ─────────────────────────────────────────────
 const CONFIG = {
   SPLASH_DURATION: 2800,
-  API_URL: '/api/chat',
 };
 
 // ─────────────────────────────────────────────
@@ -143,128 +26,231 @@ const QUOTES = [
 
 // ─────────────────────────────────────────────
 // STORAGE MANAGER
+// Гибридный: JWT + UI-настройки → localStorage
+// Чаты, память → API (БД, зашифровано)
 // ─────────────────────────────────────────────
 class StorageManager {
+  // ── localStorage (только нечувствительное) ──
+
+  getToken()      { return localStorage.getItem('anita_jwt') || ''; }
+  clearToken()    { localStorage.removeItem('anita_jwt'); }
+
   _get(key, fallback) {
-    try { return JSON.parse(localStorage.getItem(key)) || fallback; }
-    catch { return fallback; }
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null) return fallback;
+      return JSON.parse(raw) ?? fallback;
+    } catch { return fallback; }
   }
-  _set(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
 
-  // Auth Token
-  getToken()         { return localStorage.getItem('anita_jwt') || ''; }
-  setToken(t)        { localStorage.setItem('anita_jwt', t); }
-  clearToken()       { localStorage.removeItem('anita_jwt'); }
+  // UI-настройки: имя для приветствия, showProgress
+  getProfile()    { return this._get('anita_profile', { name: '', showProgress: true }); }
+  saveProfile(p)  { localStorage.setItem('anita_profile', JSON.stringify(p)); }
 
-  // User profile
-  getProfile()       { return this._get('anita_profile', { name: '', sessionsCount: 0, showProgress: true }); }
-  saveProfile(p)     { this._set('anita_profile', p); }
+  // In-memory кэш для текущей сессии (не персистентный)
+  // Чаты загружаются с сервера, здесь только кэш
+  _chatsCache   = [];   // [{ id, title, message_count, updated_at }]
+  _messagesCache = {};  // { chatId: [{ role, content }] }
+  _memoryCache  = null; // { facts, themes, techniques, name_hint }
 
-  // Memory (extracted facts about user)
-  getMemory()        { return this._get('anita_memory', { facts: [], themes: [], techniques: [] }); }
-  saveMemory(m)      { this._set('anita_memory', m); }
+  // ── API-методы (возвращают Promise) ──────────
 
-  // Chats
-  getChats()         { return this._get('anita_chats', []); }
-  saveChats(chats)   { this._set('anita_chats', chats); }
-
-  getChat(id)        { return this.getChats().find(c => c.id === id) || null; }
-  saveChat(chat) {
-    const chats = this.getChats();
-    const idx = chats.findIndex(c => c.id === chat.id);
-    if (idx >= 0) chats[idx] = chat; else chats.unshift(chat);
-    this.saveChats(chats);
+  authHeaders() {
+    const t = this.getToken();
+    return { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) };
   }
-  deleteChat(id) {
-    this.saveChats(this.getChats().filter(c => c.id !== id));
+
+  async apiFetch(method, path, body) {
+    const res = await fetch(`/api${path}`, {
+      method,
+      headers: this.authHeaders(),
+      ...(body ? { body: JSON.stringify(body) } : {}),
+    });
+    if (res.status === 401) { this.clearToken(); window.location.href = '/auth.html'; return null; }
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.status); }
+    return res.json();
+  }
+
+  // ── Список чатов ──────────────────────────────
+
+  async fetchChats() {
+    const data = await this.apiFetch('GET', '/chats');
+    this._chatsCache = data || [];
+    return this._chatsCache;
+  }
+
+  getChatsCache()   { return this._chatsCache; }
+
+  async createChat(title) {
+    const chat = await this.apiFetch('POST', '/chats', { title: title || 'Новый разговор' });
+    if (chat) {
+      chat.messages = [];
+      this._chatsCache.unshift(chat);
+      this._messagesCache[chat.id] = [];
+    }
+    return chat;
+  }
+
+  async deleteChat(id) {
+    await this.apiFetch('DELETE', `/chats/${id}`);
+    this._chatsCache = this._chatsCache.filter(c => c.id !== id);
+    delete this._messagesCache[id];
+  }
+
+  // ── Сообщения ────────────────────────────────
+
+  async fetchMessages(chatId) {
+    const data = await this.apiFetch('GET', `/chats/${chatId}`);
+    if (!data) return [];
+    this._messagesCache[chatId] = data.messages || [];
+    // Обновляем кэш чатов
+    const idx = this._chatsCache.findIndex(c => c.id === chatId);
+    if (idx >= 0) Object.assign(this._chatsCache[idx], data.chat);
+    return this._messagesCache[chatId];
+  }
+
+  getMessagesCache(chatId) { return this._messagesCache[chatId] || []; }
+
+  async saveMessage(chatId, role, content) {
+    const msg = await this.apiFetch('POST', `/chats/${chatId}/messages`, { role, content });
+    if (msg) {
+      if (!this._messagesCache[chatId]) this._messagesCache[chatId] = [];
+      this._messagesCache[chatId].push({ role, content, created_at: msg.created_at });
+      // Обновляем updated_at в кэше чатов
+      const idx = this._chatsCache.findIndex(c => c.id === chatId);
+      if (idx >= 0) {
+        this._chatsCache[idx].updated_at = msg.created_at || new Date().toISOString();
+        this._chatsCache[idx].message_count = (this._chatsCache[idx].message_count || 0) + 1;
+        // Обновляем title если это первое сообщение юзера
+        if (role === 'user' && (!this._chatsCache[idx].title || this._chatsCache[idx].title === 'Новый разговор')) {
+          this._chatsCache[idx].title = content.slice(0, 80);
+        }
+      }
+    }
+    return msg;
+  }
+
+  // ── Память Anita ──────────────────────────────
+
+  async fetchMemory() {
+    const data = await this.apiFetch('GET', '/memory');
+    this._memoryCache = data || { facts: [], themes: [], techniques: [], name_hint: null };
+    // Синхронизируем name_hint с профилем
+    if (this._memoryCache.name_hint) {
+      const profile = this.getProfile();
+      if (!profile.name) { profile.name = this._memoryCache.name_hint; this.saveProfile(profile); }
+    }
+    return this._memoryCache;
+  }
+
+  getMemoryCache() {
+    return this._memoryCache || { facts: [], themes: [], techniques: [] };
+  }
+
+  async saveMemory(mem) {
+    this._memoryCache = mem;
+    // Fire-and-forget — не блокируем UI
+    this.apiFetch('POST', '/memory', mem).catch(e => console.warn('[Memory save]', e));
   }
 }
 
 // ─────────────────────────────────────────────
-// AI SERVICE (xAI / Grok — OpenAI-compatible)
+// AI SERVICE — всё через бэкенд /api/chat
+// Ключ xAI хранится только на сервере в .env
 // ─────────────────────────────────────────────
 class AIService {
   constructor(storage) { this.storage = storage; }
 
-  async chat(messages, memoryContext) {
+  async chat(messages, conversationId, signal) {
     const token = this.storage.getToken();
     if (!token) throw new Error('NO_TOKEN');
 
-    const profile = this.storage.getProfile();
-    const profileLine = profile.name ? `\n\nИмя пользователя: ${profile.name}` : '';
-    const memoryLine = memoryContext ? `\n\nКОНТЕКСТ ПАМЯТИ (факты из прошлых сессий):\n${memoryContext}` : '';
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({
+        messages: messages.map(m => ({ role: m.role, content: m.content })),
+        conversationId,
+      }),
+      signal,
+    });
 
-    const allMessages = messages || [];
-    const turnNumber = Math.ceil(allMessages.length / 2) || 1;
-    const sessionLine = `\n\nSESSION_TURN: ${turnNumber}`;
-    const summaryHint = '';
+    if (res.status === 401) { this.storage.clearToken(); throw new Error('NO_TOKEN'); }
+    if (res.status === 429) {
+      const d = await res.json().catch(() => ({}));
+      if (d.error === 'daily_limit_exceeded') throw new Error('DAILY_LIMIT');
+    }
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.status); }
 
-    const systemText = SYSTEM_PROMPT + profileLine + memoryLine + sessionLine + summaryHint;
-    
-    const res = await fetch(CONFIG.API_URL, {
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || '';
+  }
+
+  async streamChat(messages, conversationId, onToken, onComplete, signal) {
+    const token = this.storage.getToken();
+    if (!token) throw new Error('NO_TOKEN');
+
+    const res = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({
-        messages: messages.map(m => ({ role: m.role, content: m.content })),
-        system: systemText,
-      }),
+      body: JSON.stringify({ messages, conversationId }),
+      signal,
     });
 
     if (res.status === 429) {
       const data = await res.json().catch(() => ({}));
       if (data.error === 'daily_limit_exceeded') throw new Error('DAILY_LIMIT');
     }
-
     if (res.status === 401) throw new Error('NO_TOKEN');
+    if (!res.ok) throw new Error(`API_ERROR_${res.status}`);
 
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(`API ${res.status}: ${JSON.stringify(errData)}`);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const lines = decoder.decode(value, { stream: true }).split('\n');
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (data === '[DONE]') { onComplete(); return; }
+        try {
+          const { token: tok } = JSON.parse(data);
+          if (tok) onToken(tok);
+        } catch {}
+      }
     }
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || '';
   }
 
   async extractMemory(messages) {
     const token = this.storage.getToken();
     if (!token) return null;
-
     try {
       const dialogText = messages.map(m =>
         `${m.role === 'user' ? 'Человек' : 'Anita'}: ${m.content}`
       ).join('\n');
 
-      const res = await fetch(CONFIG.API_URL, {
+      const res = await fetch('/api/chat/extract-memory', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: 'Вот диалог:\n\n' + dialogText }],
-          system: MEMORY_EXTRACT_PROMPT,
-        }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ dialog: dialogText }),
       });
-
       if (!res.ok) return null;
       const data = await res.json();
-      const text = data.choices?.[0]?.message?.content || '';
-
-      // Extract JSON from response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) return JSON.parse(jsonMatch[0]);
-    } catch (e) {
-      console.warn('Memory extraction failed:', e);
-    }
+      const text = data.choices?.[0]?.message?.content || data.content || '';
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) return JSON.parse(match[0]);
+    } catch (e) { console.warn('[Memory extract]', e); }
     return null;
   }
 }
 
 // ─────────────────────────────────────────────
-// MEMORY MANAGER
+// MEMORY MANAGER — читает/пишет через API
 // ─────────────────────────────────────────────
 class MemoryManager {
   constructor(storage, ai) {
@@ -273,223 +259,240 @@ class MemoryManager {
   }
 
   getContextForPrompt() {
-    const mem = this.storage.getMemory();
-    if (!mem.facts.length && !mem.themes.length) return '';
+    const mem = this.storage.getMemoryCache();
+    if (!mem.facts?.length && !mem.themes?.length) return '';
 
-    let lines = [];
-    if (mem.facts.length) {
+    const lines = [];
+    if (mem.facts?.length) {
       const important = mem.facts.filter(f => f.importance !== 'low').slice(-20);
       lines.push('Известные факты о человеке:');
       important.forEach(f => lines.push(`- [${f.category}] ${f.fact}`));
     }
-    if (mem.themes.length) {
+    if (mem.themes?.length) {
       lines.push('Ключевые темы прошлых сессий: ' + [...new Set(mem.themes)].slice(-10).join(', '));
     }
-    if (mem.techniques.length) {
+    if (mem.techniques?.length) {
       lines.push('Техники, которые были эффективны: ' + [...new Set(mem.techniques)].slice(-8).join(', '));
     }
     return lines.join('\n');
   }
 
   async learn(messages) {
-    if (messages.length < 6) return; // Need enough context
-
+    if (messages.length < 6) return;
     const extracted = await this.ai.extractMemory(messages);
     if (!extracted) return;
 
-    const mem = this.storage.getMemory();
+    const mem = { ...this.storage.getMemoryCache() };
     const profile = this.storage.getProfile();
 
-    // Merge name
-    if (extracted.name && !profile.name) {
-      profile.name = extracted.name;
-      this.storage.saveProfile(profile);
+    // Имя — сохраняем и в профиль (UI) и в память (БД)
+    if (extracted.name) {
+      if (!profile.name) { profile.name = extracted.name; this.storage.saveProfile(profile); }
+      mem.name_hint = extracted.name;
     }
 
-    // Merge facts (avoid duplicates)
+    // Факты
     if (extracted.facts?.length) {
-      const existingFacts = new Set(mem.facts.map(f => f.fact.toLowerCase()));
+      const existing = new Set((mem.facts || []).map(f => f.fact.toLowerCase()));
       extracted.facts.forEach(f => {
-        if (!existingFacts.has(f.fact.toLowerCase())) {
-          mem.facts.push(f);
-        }
+        if (!existing.has(f.fact.toLowerCase())) mem.facts = [...(mem.facts || []), f];
       });
-      // Keep only last 50 facts
       if (mem.facts.length > 50) mem.facts = mem.facts.slice(-50);
     }
 
-    // Merge themes
+    // Темы
     if (extracted.themes?.length) {
-      mem.themes.push(...extracted.themes);
-      mem.themes = [...new Set(mem.themes)].slice(-20);
+      mem.themes = [...new Set([...(mem.themes || []), ...extracted.themes])].slice(-20);
     }
 
-    // Merge techniques
+    // Техники
     if (extracted.techniques_effective?.length) {
-      mem.techniques.push(...extracted.techniques_effective);
-      mem.techniques = [...new Set(mem.techniques)].slice(-15);
+      mem.techniques = [...new Set([...(mem.techniques || []), ...extracted.techniques_effective])].slice(-15);
     }
 
-    this.storage.saveMemory(mem);
-    console.log('[Anita Memory] Learned:', extracted);
+    mem.mood_trajectory = extracted.mood_trajectory || mem.mood_trajectory;
+
+    await this.storage.saveMemory(mem);
+    console.log('[Anita Memory] Saved to DB:', extracted);
   }
 }
 
 // ─────────────────────────────────────────────
-// APP
+// APP — координатор UI + логика чатов v3.0
+// Все данные через API, localStorage только для JWT + UI
 // ─────────────────────────────────────────────
 class AnitaApp {
   constructor() {
     this.storage = new StorageManager();
-    this.ai = new AIService(this.storage);
-    this.memory = new MemoryManager(this.storage, this.ai);
+    this.ai      = new AIService(this.storage);
+    this.memory  = new MemoryManager(this.storage, this.ai);
 
     this.currentChatId = null;
-    this.isProcessing = false;
+    this.isProcessing  = false;
+    this.abortController = null;
+    this.streamBuffer = '';
 
     this.$ = (s) => document.querySelector(s);
     this.$$ = (s) => document.querySelectorAll(s);
 
     this.dom = {
-      splash: this.$('#splash'),
-      layout: this.$('#app-layout'),
-      sidebar: this.$('#sidebar'),
-      sidebarOverlay: this.$('#sidebar-overlay'),
-      sidebarChats: this.$('#sidebar-chats'),
-      welcomeScreen: this.$('#welcome-screen'),
-      welcomeQuote: this.$('#welcome-quote'),
-      welcomeRecent: this.$('#welcome-recent'),
-      welcomeRecentList: this.$('#welcome-recent-list'),
-      chatView: this.$('#chat-view'),
-      chatArea: this.$('#chat-area'),
-      msgInput: this.$('#msg-input'),
-      sendBtn: this.$('#send-btn'),
-      profileName: this.$('#profile-name'),
-      profileSessions: this.$('#profile-sessions'),
-      settingsModal: this.$('#settings-modal'),
-      userNameInput: this.$('#user-name-input'),
+      splash:             this.$('#splash'),
+      layout:             this.$('#app-layout'),
+      sidebar:            this.$('#sidebar'),
+      sidebarOverlay:     this.$('#sidebar-overlay'),
+      sidebarChats:       this.$('#sidebar-chats'),
+      welcomeScreen:      this.$('#welcome-screen'),
+      welcomeQuote:       this.$('#welcome-quote'),
+      welcomeRecent:      this.$('#welcome-recent'),
+      welcomeRecentList:  this.$('#welcome-recent-list'),
+      chatView:           this.$('#chat-view'),
+      chatArea:           this.$('#chat-area'),
+      msgInput:           this.$('#msg-input'),
+      sendBtn:            this.$('#send-btn'),
+      profileName:        this.$('#profile-name'),
+      profileSessions:    this.$('#profile-sessions'),
+      sidebarAuthLinks:   this.$('#sidebar-auth-links'),
+      settingsModal:      this.$('#settings-modal'),
+      userNameInput:      this.$('#user-name-input'),
       showProgressToggle: this.$('#show-progress-toggle'),
-      sessionProgress: this.$('#session-progress'),
-      turnCount: this.$('#turn-count'),
+      sessionProgress:    this.$('#session-progress'),
+      turnCount:          this.$('#turn-count'),
     };
   }
 
-  init() {
-    // Load config
-    // (API_KEY is no longer loaded from storage for the frontend)
+  // ══════════════════════════════════════════
+  // INIT
+  // ══════════════════════════════════════════
+  async init() {
+    if (!this.storage.getToken()) {
+      window.location.href = '/auth.html';
+      return;
+    }
 
-    // Session tracking
     this.setupSession();
-
-    // Splash
-    setTimeout(() => {
-      this.dom.splash.classList.add('done');
-      this.dom.layout.classList.add('visible');
-      this.showWelcome();
-    }, CONFIG.SPLASH_DURATION);
-
     this.bindEvents();
-    this.updateProfile();
+
+    // Сплэш → загрузка данных → welcome
+    console.log('[Anita] Initializing app components...');
+    setTimeout(async () => {
+      if (this.dom.splash) this.dom.splash.classList.add('done');
+      if (this.dom.layout) this.dom.layout.classList.add('visible');
+
+      try {
+        console.log('[Anita] Loading persistent data...');
+        await Promise.all([
+          this.storage.fetchMemory().catch(e => console.warn('Memory fetch failed', e)),
+          this.storage.fetchChats().catch(e => console.warn('Chats fetch failed', e)),
+        ]);
+      } catch (e) {
+        console.warn('[Init load error]', e);
+      }
+
+      this.updateProfile();
+      this.showWelcome();
+      console.log('[Anita] App ready.');
+    }, CONFIG.SPLASH_DURATION);
   }
 
+  // ══════════════════════════════════════════
+  // SESSION TRACKING (heartbeat)
+  // ══════════════════════════════════════════
   setupSession() {
-    const jwt = localStorage.getItem('anita_jwt');
+    const jwt = this.storage.getToken();
     if (!jwt) return;
 
     fetch('/api/sessions/start', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${jwt}` }
+      headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' }
     })
-    .then(res => res.json())
+    .then(r => r.json())
     .then(data => {
-      if (data.sessionId) {
-        this.sessionId = data.sessionId;
-        console.log(`[Session START] ID: ${this.sessionId}`);
-        
-        // ✅ HEARTBEAT: пинг каждые 30 секунд для поддержания активной сессии
-        this.heartbeatInterval = setInterval(() => {
-          fetch('/api/sessions/heartbeat', {
-            method: 'POST',
-            headers: { 
-              'Authorization': `Bearer ${jwt}`, 
-              'Content-Type': 'application/json' 
-            },
-            body: JSON.stringify({ sessionId: this.sessionId })
-          })
-          .then(res => {
-            if (res.status === 401) {
-              console.warn('[Heartbeat] JWT expired, clearing token');
-              this.storage.clearToken();
-              clearInterval(this.heartbeatInterval);
-            }
-          })
-          .catch(err => console.error('[Heartbeat Error]', err));
-        }, 30000); // 30 секунд
+      if (!data.sessionId) return;
+      this.sessionId = data.sessionId;
 
-        // ✅ При закрытии вкладки/браузера: явно завершить сессию
-        window.addEventListener('beforeunload', () => {
-          clearInterval(this.heartbeatInterval);
-          console.log(`[Session ENDING] User: ${this.sessionId}`);
-          fetch('/api/sessions/end', {
-            method: 'POST',
-            keepalive: true,
-            headers: { 
-              'Authorization': `Bearer ${jwt}`, 
-              'Content-Type': 'application/json' 
-            },
-            body: JSON.stringify({ sessionId: this.sessionId })
-          }).catch(console.error);
+      this.heartbeatInterval = setInterval(() => {
+        fetch('/api/sessions/heartbeat', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: this.sessionId })
+        }).then(r => {
+          if (r.status === 401) {
+            this.storage.clearToken();
+            clearInterval(this.heartbeatInterval);
+          }
+        }).catch(() => {});
+      }, 30000);
+
+      window.addEventListener('beforeunload', () => {
+        clearInterval(this.heartbeatInterval);
+        fetch('/api/sessions/end', {
+          method: 'POST', keepalive: true,
+          headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: this.sessionId })
         });
-      }
+      });
     })
-    .catch(err => console.error('[Session Start Error]', err));
+    .catch(e => console.warn('[Session start]', e));
   }
 
-  // ── Events ──
+  // ══════════════════════════════════════════
+  // EVENTS
+  // ══════════════════════════════════════════
   bindEvents() {
-    // New chat
-    this.$('#new-chat-btn').addEventListener('click', () => this.createNewChat());
-    this.$('#welcome-start-btn').addEventListener('click', () => this.createNewChat());
+    const bind = (id, event, fn) => {
+      const el = id.startsWith('#') ? this.$(id) : id;
+      if (el) el.addEventListener(event, fn);
+      else console.warn(`[Anita] Could not bind ${event} to missing element: ${id}`);
+    };
 
-    // Send message
-    this.dom.sendBtn.addEventListener('click', () => this.sendMessage());
-    this.dom.msgInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendMessage(); }
-    });
-    this.dom.msgInput.addEventListener('input', () => this.onInputChange());
+    bind('#new-chat-btn', 'click', () => this.createNewChat());
+    bind('#welcome-start-btn', 'click', () => this.createNewChat());
 
-    // Mobile sidebar
-    this.$('#menu-btn').addEventListener('click', () => this.toggleSidebar(true));
-    this.$('#sidebar-close').addEventListener('click', () => this.toggleSidebar(false));
-    this.dom.sidebarOverlay.addEventListener('click', () => this.toggleSidebar(false));
+    const stopBtn = this.$('#stop-btn');
+    if (stopBtn) bind(stopBtn, 'click', () => this.stopGeneration());
 
-    // Settings
-    this.$('#settings-btn').addEventListener('click', () => this.openSettings());
-    this.$('#modal-cancel').addEventListener('click', () => this.closeSettings());
-    this.$('#modal-save').addEventListener('click', () => this.saveSettings());
-    this.dom.settingsModal.addEventListener('click', (e) => {
-      if (e.target === this.dom.settingsModal) this.closeSettings();
-    });
+    if (this.dom.sendBtn) bind(this.dom.sendBtn, 'click', () => this.sendMessage());
+    
+    if (this.dom.msgInput) {
+      bind(this.dom.msgInput, 'keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.sendMessage(); }
+      });
+      bind(this.dom.msgInput, 'input', () => this.onInputChange());
+    }
+
+    bind('#menu-btn', 'click', () => this.toggleSidebar(true));
+    bind('#sidebar-close', 'click', () => this.toggleSidebar(false));
+    
+    if (this.dom.sidebarOverlay) bind(this.dom.sidebarOverlay, 'click', () => this.toggleSidebar(false));
+
+    bind('#settings-btn', 'click', () => this.openSettings());
+    bind('#modal-cancel', 'click', () => this.closeSettings());
+    bind('#modal-save', 'click', () => this.saveSettings());
+    
+    if (this.dom.settingsModal) {
+      bind(this.dom.settingsModal, 'click', e => {
+        if (e.target === this.dom.settingsModal) this.closeSettings();
+      });
+    }
   }
 
-  // ── Welcome ──
+  // ══════════════════════════════════════════
+  // WELCOME SCREEN
+  // ══════════════════════════════════════════
   showWelcome() {
-    // Random quote
     this.dom.welcomeQuote.textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
 
-    // Recent chats
-    const chats = this.storage.getChats();
+    const chats = this.storage.getChatsCache();
     if (chats.length) {
       this.dom.welcomeRecent.style.display = '';
       this.dom.welcomeRecentList.innerHTML = '';
       chats.slice(0, 5).forEach(chat => {
         const card = document.createElement('button');
         card.className = 'recent-card';
-        const preview = this.getChatPreview(chat);
         card.innerHTML = `
-          <div class="recent-card-date">${this.formatDate(chat.updatedAt)}</div>
-          <div class="recent-card-preview">${this.esc(preview)}</div>
-          <div class="recent-card-count">${chat.messages.length} сообщ.</div>
+          <div class="recent-card-date">${this.formatDate(chat.updated_at)}</div>
+          <div class="recent-card-preview">${this.esc(chat.title || 'Новый разговор')}</div>
+          <div class="recent-card-count">${chat.message_count || 0} сообщ.</div>
         `;
         card.addEventListener('click', () => this.loadChat(chat.id));
         this.dom.welcomeRecentList.appendChild(card);
@@ -498,58 +501,60 @@ class AnitaApp {
       this.dom.welcomeRecent.style.display = 'none';
     }
 
-    // Render sidebar
     this.renderSidebar();
-
-    // Show welcome, hide chat
     this.dom.welcomeScreen.classList.remove('hidden');
     this.dom.chatView.style.display = 'none';
     this.currentChatId = null;
-
-    // Deselect sidebar items
     this.$$('.chat-item.active').forEach(el => el.classList.remove('active'));
   }
 
-  // ── Chat CRUD ──
-  createNewChat() {
-    const chat = {
-      id: 'chat_' + Date.now(),
-      messages: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    this.storage.saveChat(chat);
-    this.loadChat(chat.id);
+  // ══════════════════════════════════════════
+  // CHAT CRUD — все операции async через API
+  // ══════════════════════════════════════════
+  async createNewChat() {
+    try {
+      const chat = await this.storage.createChat('Новый разговор');
+      if (!chat) return;
 
-    // Increment sessions
-    const profile = this.storage.getProfile();
-    profile.sessionsCount = (profile.sessionsCount || 0) + 1;
-    this.storage.saveProfile(profile);
-    this.updateProfile();
+      // Обновляем счётчик сессий в профиле
+      const profile = this.storage.getProfile();
+      profile.sessionsCount = (profile.sessionsCount || 0) + 1;
+      this.storage.saveProfile(profile);
+      this.updateProfile();
+
+      await this.loadChat(chat.id);
+    } catch (e) {
+      console.error('[createNewChat]', e);
+    }
   }
 
-  loadChat(id) {
-    const chat = this.storage.getChat(id);
-    if (!chat) return;
-
+  async loadChat(id) {
     this.currentChatId = id;
 
-    // Switch views
+    // Переключаем вид
     this.dom.welcomeScreen.classList.add('hidden');
     this.dom.chatView.style.display = 'flex';
-
-    // Render messages
     this.dom.chatArea.innerHTML = '';
-    if (chat.messages.length === 0) {
-      // Fresh chat — show welcome message
-      const greeting = this.getGreeting();
-      this.appendBubble('anita', greeting);
-      setTimeout(() => this.showChips(), 500);
-    } else {
-      // Restore existing messages
-      chat.messages.forEach(m => {
-        this.appendBubble(m.role === 'user' ? 'user' : 'anita', m.content);
-      });
+
+    // Показываем скелетон пока грузим
+    this.showLoadingSkeleton();
+
+    try {
+      const messages = await this.storage.fetchMessages(id);
+      this.dom.chatArea.innerHTML = '';
+
+      if (messages.length === 0) {
+        // Новый чат — приветствие + чипы
+        this.appendBubble('anita', this.getGreeting());
+        setTimeout(() => this.showChips(), 400);
+      } else {
+        // Восстанавливаем историю из БД
+        messages.forEach(m => this.appendBubble(m.role, m.content));
+      }
+    } catch (e) {
+      this.dom.chatArea.innerHTML = '';
+      this.appendBubble('anita', 'Не удалось загрузить историю. Попробуй обновить страницу.');
+      console.error('[loadChat]', e);
     }
 
     this.renderSidebar();
@@ -558,55 +563,78 @@ class AnitaApp {
     this.scrollBottom();
   }
 
-  updateProgressUI() {
-    const chat = this.storage.getChat(this.currentChatId);
-    if (!chat) return;
+  async deleteChat(id) {
+    try {
+      await this.storage.deleteChat(id);
+      if (this.currentChatId === id) this.showWelcome();
+      else this.renderSidebar();
+    } catch (e) {
+      console.error('[deleteChat]', e);
+    }
+  }
 
-    const profile = this.storage.getProfile();
-    if (profile.showProgress) {
+  showLoadingSkeleton() {
+    const sk = document.createElement('div');
+    sk.id = 'chat-skeleton';
+    sk.style.cssText = 'padding:20px;opacity:0.4;';
+    sk.innerHTML = `
+      <div style="height:16px;background:var(--bg-card);border-radius:8px;width:60%;margin-bottom:12px;"></div>
+      <div style="height:16px;background:var(--bg-card);border-radius:8px;width:80%;margin-bottom:12px;margin-left:auto;"></div>
+      <div style="height:16px;background:var(--bg-card);border-radius:8px;width:50%;margin-bottom:12px;"></div>
+    `;
+    this.dom.chatArea.appendChild(sk);
+  }
+
+  // ══════════════════════════════════════════
+  // ПРОГРЕСС СЕССИИ
+  // ══════════════════════════════════════════
+  updateProgressUI() {
+    const messages = this.storage.getMessagesCache(this.currentChatId);
+    const profile  = this.storage.getProfile();
+
+    if (profile.showProgress !== false && this.dom.sessionProgress) {
       this.dom.sessionProgress.style.display = 'flex';
-      const turn = Math.ceil(chat.messages.length / 2) || 1;
+      const turn = Math.ceil(messages.length / 2) || 1;
       this.dom.turnCount.textContent = turn;
-    } else {
+    } else if (this.dom.sessionProgress) {
       this.dom.sessionProgress.style.display = 'none';
     }
   }
 
-  deleteChat(id) {
-    this.storage.deleteChat(id);
-    if (this.currentChatId === id) this.showWelcome();
-    else this.renderSidebar();
-  }
-
-  // ── Greeting ──
+  // ══════════════════════════════════════════
+  // GREETING
+  // ══════════════════════════════════════════
   getGreeting() {
     const profile = this.storage.getProfile();
-    const mem = this.storage.getMemory();
+    const mem     = this.storage.getMemoryCache();
 
-    // Returning user
     if (profile.name) {
-      if (profile.sessionsCount > 3) {
-        return `Привет, ${profile.name}. Рада видеть тебя снова. Как ты сегодня?`;
-      }
-      return `Привет, ${profile.name}. Я здесь. О чём хочешь поговорить?`;
+      const sessions = profile.sessionsCount || 0;
+      if (sessions > 5) return `${profile.name}. Рада видеть тебя снова. Как ты?`;
+      if (sessions > 2) return `Привет, ${profile.name}. Я здесь. О чём сегодня?`;
+      return `Привет, ${profile.name}. С чего хочешь начать?`;
     }
 
-    // First time
-    return 'Привет. Я — Anita. Здесь можно говорить обо всём, что тебя беспокоит — без осуждения и спешки. Я не буду давать готовых ответов, но помогу тебе найти свои. С чего хочешь начать?';
+    if (mem.themes?.length >= 2) {
+      return 'С возвращением. Я помню наши прошлые разговоры. Как ты сейчас?';
+    }
+
+    return 'Привет. Я — Anita. Здесь можно говорить обо всём, что тебя беспокоит — без осуждения и спешки. С чего хочешь начать?';
   }
 
-  // ── Chips ──
+  // ══════════════════════════════════════════
+  // CHIPS — быстрые подсказки
+  // ══════════════════════════════════════════
   showChips() {
-    const mem = this.storage.getMemory();
+    const mem = this.storage.getMemoryCache();
     let chips;
 
-    if (mem.themes.length >= 2) {
-      // Returning user — offer relevant topics
+    if (mem.themes?.length >= 2) {
       chips = [
         'Хочу продолжить прошлый разговор',
-        ...mem.themes.slice(-3).map(t => `Поговорить о: ${t}`),
+        ...mem.themes.slice(-2).map(t => `Поговорить о: ${t}`),
         'Что-то новое',
-      ].slice(0, 5);
+      ].slice(0, 4);
     } else {
       chips = [
         'Меня что-то тревожит',
@@ -624,10 +652,7 @@ class AnitaApp {
       const btn = document.createElement('button');
       btn.className = 'chip';
       btn.textContent = text;
-      btn.addEventListener('click', () => {
-        this.removeChips();
-        this.sendMessage(text);
-      });
+      btn.addEventListener('click', () => { this.removeChips(); this.sendMessage(text); });
       container.appendChild(btn);
     });
     this.dom.chatArea.appendChild(container);
@@ -639,7 +664,9 @@ class AnitaApp {
     if (el) { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }
   }
 
-  // ── Send Message ──
+  // ══════════════════════════════════════════
+  // SEND MESSAGE — streaming via SSE
+  // ══════════════════════════════════════════
   async sendMessage(text) {
     const msg = text || this.dom.msgInput.value.trim();
     if (!msg || this.isProcessing) return;
@@ -650,244 +677,291 @@ class AnitaApp {
     this.updateSendBtn();
     this.removeChips();
 
-    // Add user bubble
-    this.appendBubble('user', msg);
-
-    // Save to chat
-    const chat = this.storage.getChat(this.currentChatId);
-    if (!chat) { this.isProcessing = false; return; }
-    chat.messages.push({ role: 'user', content: msg });
-    chat.updatedAt = Date.now();
-    this.storage.saveChat(chat);
-    this.renderSidebar();
-    this.updateProgressUI();
-
-    // Typing
-    this.showTyping();
+    // Show stop button
+    const stopBtn = this.$('#stop-btn');
+    const sendBtn = this.dom.sendBtn;
+    if (stopBtn) { stopBtn.style.display = ''; sendBtn.style.display = 'none'; }
 
     try {
-      const memoryCtx = this.memory.getContextForPrompt();
-      const response = await this.ai.chat(chat.messages, memoryCtx);
-
-      this.hideTyping();
-      this.appendBubble('anita', response);
-
-      // Save assistant response
-      chat.messages.push({ role: 'assistant', content: response });
-      chat.updatedAt = Date.now();
-      this.storage.saveChat(chat);
+      this.appendBubble('user', msg);
+      const messages = this.storage.getMessagesCache(this.currentChatId);
+      messages.push({ role: 'user', content: msg });
+      this.storage.saveMessage(this.currentChatId, 'user', msg).catch(console.warn);
+      this.renderSidebar();
       this.updateProgressUI();
+      this.showTyping();
 
-      // Background: extract memory every 8 messages
-      if (chat.messages.length % 8 === 0) {
-        this.memory.learn(chat.messages);
+      if (this.abortController) this.abortController.abort();
+      this.abortController = new AbortController();
+
+      this.startStreamingBubble();
+
+      let fullResponse = '';
+      await this.streamWithRetry(
+        messages,
+        this.currentChatId,
+        (token) => {
+          fullResponse += token;
+          this.appendStreamToken(token);
+        },
+        () => {},
+        this.abortController.signal
+      );
+
+      this.finalizeStreamingBubble();
+
+      if (fullResponse) {
+        messages.push({ role: 'assistant', content: fullResponse });
+        await this.storage.saveMessage(this.currentChatId, 'assistant', fullResponse);
+        this.renderSidebar();
+        this.updateProgressUI();
+
+        // Auto-title after first exchange
+        if (messages.length === 2 && this.currentChatId) {
+          fetch(`/api/conversations/${this.currentChatId}/generate-title`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${this.storage.getToken()}` },
+          })
+          .then(r => r.json())
+          .then(({ title }) => {
+            const el = this.dom.sidebarChats.querySelector(
+              `[data-conv-id="${this.currentChatId}"] .chat-item-title`
+            );
+            if (el && title) el.textContent = title;
+          })
+          .catch(() => {});
+        }
+
+        if (messages.length % 8 === 0) {
+          this.memory.learn(messages).catch(console.warn);
+        }
       }
     } catch (err) {
+      this.finalizeStreamingBubble();
       this.hideTyping();
-      console.error('AI Error:', err);
-      
-      if (err.message === 'NO_TOKEN') {
-        this.appendBubble('anita', 'Твоя сессия истекла или недействительна. Пожалуйста, зайди снова по своей инвайт-ссылке.');
-        this.storage.clearToken();
-      } else if (err.message === 'DAILY_LIMIT') {
-        this.appendBubble('anita', 'На сегодня лимит сообщений исчерпан. Я буду очень ждать тебя завтра! 🌙');
-      } else {
-        this.appendBubble('anita', 'Извини, что-то пошло не так. Попробуй ещё раз чуть позже.');
-      }
+      this.handleAIError(err);
+    } finally {
+      this.isProcessing = false;
+      this.abortController = null;
+      this.updateSendBtn();
+      if (stopBtn) { stopBtn.style.display = 'none'; sendBtn.style.display = ''; }
+      this.scrollBottom();
     }
-
-    this.isProcessing = false;
   }
 
-  // ── Bubbles ──
-  appendBubble(role, text) {
+  handleAIError(err) {
+    if (err.name === 'AbortError') return;
+    if (err.message === 'NO_TOKEN') {
+      this.appendBubble('anita', 'Сессия истекла. Войди снова по своей ссылке.');
+      this.storage.clearToken();
+      return;
+    }
+    if (err.message === 'DAILY_LIMIT') {
+      this.appendBubble('anita', 'На сегодня лимит сообщений исчерпан. Очень жду тебя завтра 🌙');
+      return;
+    }
+    this.appendBubble('anita', 'Что-то пошло не так. Попробуй ещё раз.');
+  }
+
+  stopGeneration() {
+    if (this.abortController) {
+      this.abortController.abort();
+      this.abortController = null;
+      this.finalizeStreamingBubble();
+      this.isProcessing = false;
+      this.updateSendBtn();
+      const stopBtn = this.$('#stop-btn');
+      if (stopBtn) stopBtn.style.display = 'none';
+      this.dom.sendBtn.style.display = '';
+    }
+  }
+
+  async streamWithRetry(messages, convId, onToken, onComplete, signal, maxRetries = 2) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.ai.streamChat(messages, convId, onToken, onComplete, signal);
+      } catch (err) {
+        if (err.name === 'AbortError') throw err;
+        if (err.message === 'DAILY_LIMIT') throw err;
+        if (err.message === 'NO_TOKEN') throw err;
+        if (attempt === maxRetries) throw err;
+
+        const delay = 1000 * Math.pow(2, attempt) + Math.random() * 300;
+        console.warn(`[AI] Attempt ${attempt + 1} failed, retry in ${Math.round(delay)}ms`);
+
+        const streamEl = document.getElementById('streaming-content');
+        if (streamEl) streamEl.innerHTML = `<em style="opacity:0.5">Переподключение...</em>`;
+
+        await new Promise(r => setTimeout(r, delay));
+      }
+    }
+  }
+
+  startStreamingBubble() {
+    this.hideTyping();
     const div = document.createElement('div');
-    div.className = `message ${role}`;
-    const avatar = role === 'anita'
-      ? '<img src="icon.svg" alt="Anita" class="msg-avatar">'
-      : '';
-
-    let html = this.esc(text)
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/\n/g, '<br>');
-
-    div.innerHTML = `${avatar}<div class="bubble">${html}</div>`;
+    div.className = 'message anita';
+    div.id = 'streaming-bubble';
+    div.innerHTML = `<div class="message-content" id="streaming-content"></div>
+                     <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
     this.dom.chatArea.appendChild(div);
-    this.scrollBottom();
+    this.streamBuffer = '';
     return div;
   }
 
-  showTyping() {
-    const div = document.createElement('div');
-    div.className = 'typing';
-    div.id = 'typing';
-    div.innerHTML = `
-      <img src="icon.svg" alt="" class="msg-avatar">
-      <div class="bubble">
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-      </div>`;
-    this.dom.chatArea.appendChild(div);
+  appendStreamToken(token) {
+    this.streamBuffer += token;
+    const el = document.getElementById('streaming-content');
+    if (el) {
+      el.innerHTML = this.esc(this.streamBuffer).replace(/\n/g, '<br>');
+      this.scrollBottom();
+    }
+  }
+
+  finalizeStreamingBubble() {
+    const el = document.getElementById('streaming-bubble');
+    if (el) el.removeAttribute('id');
+    const content = this.streamBuffer;
+    this.streamBuffer = '';
+    return content;
+  }
+
+  hideTyping() { this.removeTyping(); }
+
+  // ══════════════════════════════════════════
+  // UI HELPERS
+  // ══════════════════════════════════════════
+  appendBubble(role, content, isError = false) {
+    const bubble = document.createElement('div');
+    bubble.className = `message ${role} ${isError ? 'error' : ''}`;
+    
+    // Markdown-подобная обработка (переносы строк)
+    const formatted = this.esc(content).replace(/\n/g, '<br>');
+    
+    bubble.innerHTML = `
+      <div class="message-content">${formatted}</div>
+      <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+    `;
+    
+    this.dom.chatArea.appendChild(bubble);
     this.scrollBottom();
   }
 
-  hideTyping() {
-    const el = this.$('#typing');
-    if (el) el.remove();
+  showTyping() {
+    const t = document.createElement('div');
+    t.id = 'typing-indicator';
+    t.className = 'message anita typing';
+    t.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+    this.dom.chatArea.appendChild(t);
+    this.scrollBottom();
   }
 
-  // ── Input ──
-  onInputChange() { this.autoResize(); this.updateSendBtn(); }
-  autoResize() {
-    const el = this.dom.msgInput;
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-  }
-  updateSendBtn() {
-    this.dom.sendBtn.classList.toggle('active', !!this.dom.msgInput.value.trim());
-  }
-
-  // ── Sidebar ──
-  toggleSidebar(open) {
-    this.dom.sidebar.classList.toggle('open', open);
-    this.dom.sidebarOverlay.classList.toggle('show', open);
+  removeTyping() {
+    const t = this.$('#typing-indicator');
+    if (t) t.remove();
   }
 
   renderSidebar() {
-    const chats = this.storage.getChats();
-    const container = this.dom.sidebarChats;
+    const chats = this.storage.getChatsCache();
+    this.dom.sidebarChats.innerHTML = '<div class="sidebar-section-title">Разговоры</div>';
 
-    // Keep section title, clear rest
-    const title = container.querySelector('.sidebar-section-title');
-    container.innerHTML = '';
-    if (title) container.appendChild(title);
-    else {
-      const t = document.createElement('div');
-      t.className = 'sidebar-section-title';
-      t.textContent = 'Разговоры';
-      container.appendChild(t);
-    }
-
-    if (!chats.length) {
-      const empty = document.createElement('div');
-      empty.style.cssText = 'padding:20px 12px; text-align:center; font-size:13px; color: var(--text-muted);';
-      empty.textContent = 'Пока нет разговоров';
-      container.appendChild(empty);
+    if (chats.length === 0) {
+      this.dom.sidebarChats.innerHTML += '<div style="padding:20px; color:var(--text-muted); font-size:13px; text-align:center;">Пока нет истории разговоров</div>';
       return;
     }
 
     chats.forEach(chat => {
-      const item = document.createElement('div');
-      item.className = 'chat-item' + (chat.id === this.currentChatId ? ' active' : '');
-
-      const preview = this.getChatPreview(chat);
-      const icon = this.getChatIcon(chat);
-
-      item.innerHTML = `
-        <div class="chat-item-icon">${icon}</div>
-        <div class="chat-item-info">
-          <div class="chat-item-title">${this.esc(preview) || 'Новый разговор'}</div>
-          <div class="chat-item-date">${this.formatDate(chat.updatedAt)}</div>
-        </div>
-        <button class="chat-item-delete" aria-label="Удалить">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5 0V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/></svg>
+      const el = document.createElement('div');
+      el.className = `chat-item ${this.currentChatId === chat.id ? 'active' : ''}`;
+      el.innerHTML = `
+        <div class="chat-item-title">${this.esc(chat.title || 'Новый разговор')}</div>
+        <div class="chat-item-meta">${this.formatDate(chat.updated_at)}</div>
+        <button class="chat-item-del" aria-label="Удалить">
+           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         </button>
       `;
-
-      item.addEventListener('click', (e) => {
-        if (!e.target.closest('.chat-item-delete')) this.loadChat(chat.id);
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.chat-item-del')) {
+          e.stopPropagation();
+          if (confirm('Удалить этот разговор?')) this.deleteChat(chat.id);
+        } else {
+          this.loadChat(chat.id);
+        }
       });
-      item.querySelector('.chat-item-delete').addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.deleteChat(chat.id);
-      });
-
-      container.appendChild(item);
+      this.dom.sidebarChats.appendChild(el);
     });
   }
 
-  getChatPreview(chat) {
-    const userMsg = chat.messages.find(m => m.role === 'user');
-    if (userMsg) return userMsg.content.slice(0, 60);
-    return '';
-  }
-
-  getChatIcon(chat) {
-    const emojis = ['💭', '🌊', '🧠', '💡', '🌙', '🔮', '🌿', '🎭'];
-    const idx = parseInt(chat.id.replace('chat_', '')) % emojis.length;
-    return emojis[idx];
-  }
-
-  // ── Profile ──
   updateProfile() {
-    const profile = this.storage.getProfile();
-    this.dom.profileName.textContent = profile.name || 'Гость';
-    this.dom.profileSessions.textContent = `${profile.sessionsCount || 0} сессий`;
+    const p = this.storage.getProfile();
+    if (this.dom.profileName) this.dom.profileName.textContent = p.name || 'Гость';
+
+    // Hide "Войти или Зарегистрироваться" link for logged-in registered users
+    if (this.dom.sidebarAuthLinks) {
+      this.dom.sidebarAuthLinks.style.display = p.name ? 'none' : '';
+    }
+
+    if (this.dom.profileSessions) {
+      this.dom.profileSessions.textContent = `${p.sessionsCount || 0} сессий`;
+      this.dom.profileSessions.style.display = (p.name || p.sessionsCount > 0) ? 'block' : 'none';
+    }
+
+    if (this.dom.userNameInput) this.dom.userNameInput.value = p.name || '';
+    if (this.dom.showProgressToggle) this.dom.showProgressToggle.checked = p.showProgress !== false;
   }
 
-  // ── Settings ──
-  openSettings() {
-    const profile = this.storage.getProfile();
-    this.dom.userNameInput.value = profile.name || '';
-    this.dom.showProgressToggle.checked = profile.showProgress !== false;
-    this.dom.settingsModal.classList.add('show');
-  }
-
-  closeSettings() {
-    this.dom.settingsModal.classList.remove('show');
-  }
-
-  saveSettings() {
-    const userName = this.dom.userNameInput.value.trim();
-    const showProgress = this.dom.showProgressToggle.checked;
-
-    const profile = this.storage.getProfile();
-    profile.name = userName;
-    profile.showProgress = showProgress;
-    this.storage.saveProfile(profile);
+  openSettings()      { this.dom.settingsModal.classList.add('visible'); }
+  closeSettings()     { this.dom.settingsModal.classList.remove('visible'); }
+  saveSettings()      {
+    const p = this.storage.getProfile();
+    p.name = this.dom.userNameInput.value.trim();
+    p.showProgress = this.dom.showProgressToggle.checked;
+    this.storage.saveProfile(p);
     this.updateProfile();
     this.updateProgressUI();
-
     this.closeSettings();
-
-    if (this.currentChatId) {
-      this.appendBubble('anita', 'Настройки сохранены. Я готова слушать дальше.');
-    }
   }
 
-  // ── Helpers ──
+  toggleSidebar(open) {
+    this.dom.sidebar.classList.toggle('open', open);
+    this.dom.sidebarOverlay.classList.toggle('visible', open);
+  }
+
+  onInputChange() {
+    this.autoResize();
+    this.updateSendBtn();
+  }
+
+  autoResize() {
+    const input = this.dom.msgInput;
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  }
+
+  updateSendBtn() {
+    this.dom.sendBtn.disabled = !this.dom.msgInput.value.trim() || this.isProcessing;
+  }
+
   scrollBottom() {
-    requestAnimationFrame(() => {
-      this.dom.chatArea.scrollTop = this.dom.chatArea.scrollHeight;
-    });
+    setTimeout(() => {
+      this.dom.chatArea.scrollTo({ top: this.dom.chatArea.scrollHeight, behavior: 'smooth' });
+    }, 100);
   }
 
   esc(str) {
-    const d = document.createElement('div');
-    d.textContent = str;
-    return d.innerHTML;
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  formatDate(ts) {
-    const d = new Date(ts);
+  formatDate(iso) {
+    if (!iso) return '';
+    const date = new Date(iso);
     const now = new Date();
-    const diff = now - d;
-
-    if (diff < 60000) return 'Только что';
-    if (diff < 3600000) return `${Math.floor(diff/60000)} мин назад`;
-    if (diff < 86400000) return `${Math.floor(diff/3600000)} ч назад`;
-    if (diff < 172800000) return 'Вчера';
-
-    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+    if (date.toDateString() === now.toDateString()) return 'Сегодня';
+    return date.toLocaleDateString([], { day: 'numeric', month: 'short' });
   }
 }
 
-// ─────────────────────────────────────────────
-// BOOT
-// ─────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  const app = new AnitaApp();
-  app.init();
-});
+// ── Запуск ──
+const app = new AnitaApp();
+document.addEventListener('DOMContentLoaded', () => app.init());

@@ -3,6 +3,10 @@ const router = express.Router();
 const db = require('../db');
 const { requireAdmin } = require('../middleware/requireAuth');
 const logAdminAction = require('../utils/adminLog');
+const crypto = require('crypto');
+
+// Single-use download tokens: token -> { adminId, expiresAt }
+const downloadTokens = new Map();
 
 router.use(requireAdmin);
 
@@ -111,8 +115,31 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// POST /api/admin/generate-download-token
+router.post('/generate-download-token', async (req, res) => {
+  const downloadToken = crypto.randomBytes(16).toString('hex');
+  downloadTokens.set(downloadToken, {
+    adminId: req.user.adminId,
+    expiresAt: Date.now() + 60000,
+  });
+  // Cleanup expired tokens
+  for (const [key, val] of downloadTokens.entries()) {
+    if (val.expiresAt < Date.now()) downloadTokens.delete(key);
+  }
+  res.json({ downloadToken });
+});
+
 // Экспорт пользователей
 router.get('/users/export', async (req, res) => {
+  const dt = req.query.dt;
+  if (dt) {
+    // Validate single-use download token (bypasses requireAdmin middleware already applied)
+    const entry = downloadTokens.get(dt);
+    if (!entry || entry.expiresAt < Date.now()) {
+      return res.status(401).json({ error: 'Токен недействителен или истёк' });
+    }
+    downloadTokens.delete(dt);
+  }
   try {
     const query = `
       SELECT 
@@ -259,6 +286,228 @@ router.get('/quota-stats', async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// POST /api/admin/users/:id/temp-ban
+router.post('/users/:id/temp-ban', async (req, res) => {
+  try {
+    const { reason } = req.body;
+    await db.query(
+      'INSERT INTO temp_bans (user_id, reason, banned_by) VALUES ($1, $2, $3)',
+      [req.params.id, reason || null, req.user.adminId]
+    );
+    await logAdminAction(req.user.adminId, 'temp_ban_user', 'user', req.params.id, { reason });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка бана' });
+  }
+});
+
+// POST /api/admin/users/:id/unban
+// Разбанить и выдать новый инвайт
+router.post('/users/:id/unban', async (req, res) => {
+  try {
+    const { label } = req.body; // подпись для нового инвайта
+
+    // Генерируем новый инвайт для пользователя
+    const newToken = crypto.randomBytes(32).toString('hex');
+    const inviteRes = await db.query(
+      'INSERT INTO invites (token, label, max_uses) VALUES ($1, $2, 1) RETURNING id',
+      [newToken, label || 'Повторный доступ', 1]
+    );
+    const newInviteId = inviteRes.rows[0].id;
+
+    // Закрываем активный бан
+    await db.query(
+      `UPDATE temp_bans SET unbanned_at = NOW(), new_invite_id = $1
+       WHERE user_id = $2 AND unbanned_at IS NULL`,
+      [newInviteId, req.params.id]
+    );
+
+    await logAdminAction(req.user.adminId, 'unban_user', 'user', req.params.id, { newInviteId });
+
+    // Обратите внимание: URL фронтенда берется из окружения или пустой строки
+    const newLink = `${process.env.FRONTEND_URL || req.headers.origin || ''}/?invite=${newToken}`;
+    res.json({ success: true, newLink, inviteId: newInviteId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Ошибка разбана' });
+  }
+});
+
+// ── Token Stats ──────────────────────────────────────────────
+router.get('/token-stats', async (req, res) => {
+  try {
+    const { getDailyTokenStats } = require('../services/tokenTracker');
+    const stats = await getDailyTokenStats();
+    res.json(stats.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ── Evolution: Technique Stats ────────────────────────────────
+router.get('/evolution/technique-stats', async (req, res) => {
+  try {
+    await db.query('REFRESH MATERIALIZED VIEW technique_stats');
+    const result = await db.query('SELECT * FROM technique_stats ORDER BY success_rate_pct DESC');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/evolution/suggestions', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT * FROM prompt_suggestions ORDER BY created_at DESC LIMIT 50`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.patch('/evolution/suggestions/:id', async (req, res) => {
+  try {
+    const { status } = req.body;
+    await db.query(
+      `UPDATE prompt_suggestions
+       SET status=$1, approved_by=$2, approved_at=NOW() WHERE id=$3`,
+      [status, req.user.adminId, req.params.id]
+    );
+    await logAdminAction(req.user.adminId, `${status}_suggestion`, 'prompt_suggestion', req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.get('/evolution/crisis-events', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT ce.*, u.nickname FROM crisis_events ce
+      LEFT JOIN users u ON ce.user_id = u.id
+      ORDER BY ce.reviewed_at IS NULL DESC, ce.created_at DESC LIMIT 100
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+router.patch('/evolution/crisis-events/:id/review', async (req, res) => {
+  try {
+    await db.query(
+      `UPDATE crisis_events SET reviewed_by=$1, reviewed_at=NOW() WHERE id=$2`,
+      [req.user.adminId, req.params.id]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+
+// ─── Поиск по нику / IP / инвайту ───────────────────────────────────────────
+router.get('/users/search', async (req, res) => {
+  const { q } = req.query;
+  if (!q || q.trim().length < 2) {
+    return res.status(400).json({ error: 'Минимум 2 символа' });
+  }
+  try {
+    const result = await db.query(`
+      SELECT
+        u.id, u.nickname, u.ip, u.country, u.country_code,
+        u.device_type, u.browser, u.first_seen, u.last_seen,
+        u.is_blocked, i.label as "inviteLabel",
+        COUNT(s.id) as "totalSessions"
+      FROM users u
+      LEFT JOIN invites i ON u.invite_id = i.id
+      LEFT JOIN sessions s ON u.id = s.user_id
+      WHERE u.nickname ILIKE $1 OR u.ip ILIKE $1 OR i.label ILIKE $1
+      GROUP BY u.id, i.label
+      ORDER BY u.last_seen DESC
+      LIMIT 50
+    `, [`%${q.trim()}%`]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка поиска' });
+  }
+});
+
+// ─── Блокировка / разблокировка ─────────────────────────────────────────────
+router.patch('/users/:id/block', async (req, res) => {
+  try {
+    const result = await db.query(
+      'UPDATE users SET is_blocked = NOT is_blocked WHERE id=$1 RETURNING id, is_blocked',
+      [req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Не найден' });
+
+    const { is_blocked } = result.rows[0];
+    await logAdminAction(
+      req.user.adminId,
+      is_blocked ? 'block_user' : 'unblock_user',
+      'user', req.params.id, { is_blocked }
+    );
+
+    // При блокировке — закрыть активные сессии
+    if (is_blocked) {
+      await db.query(`
+        UPDATE sessions
+        SET is_active = false, ended_at = NOW(),
+            duration_seconds = EXTRACT(EPOCH FROM (NOW() - started_at))
+        WHERE user_id = $1 AND is_active = true
+      `, [req.params.id]);
+    }
+
+    res.json({ success: true, is_blocked });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка блокировки' });
+  }
+});
+
+// ─── Полное удаление (каскадное) ─────────────────────────────────────────────
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const userInfo = await db.query(
+      'SELECT nickname, ip FROM users WHERE id=$1',
+      [req.params.id]
+    );
+    if (!userInfo.rows.length) return res.status(404).json({ error: 'Не найден' });
+
+    await db.query('DELETE FROM users WHERE id=$1', [req.params.id]);
+
+    await logAdminAction(
+      req.user.adminId, 'delete_user', 'user', req.params.id,
+      { ...userInfo.rows[0], deleted_at: new Date().toISOString() }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка удаления' });
+  }
+});
+
+// ─── Сброс активных сессий без удаления аккаунта ────────────────────────────
+router.post('/users/:id/reset-sessions', async (req, res) => {
+  try {
+    const result = await db.query(`
+      UPDATE sessions
+      SET is_active = false, ended_at = NOW(),
+          duration_seconds = EXTRACT(EPOCH FROM (NOW() - started_at))
+      WHERE user_id = $1 AND is_active = true RETURNING id
+    `, [req.params.id]);
+
+    await logAdminAction(req.user.adminId, 'reset_sessions', 'user', req.params.id, {
+      sessions_closed: result.rowCount,
+    });
+
+    res.json({ success: true, sessions_closed: result.rowCount });
+  } catch (err) {
+    res.status(500).json({ error: 'Ошибка сброса сессий' });
   }
 });
 

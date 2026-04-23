@@ -1,5 +1,5 @@
 FROM nginx:alpine
 COPY frontend/ /usr/share/nginx/html/
 COPY admin/ /usr/share/nginx/html/admin/
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY infra/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
