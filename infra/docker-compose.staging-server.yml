@@ -1,6 +1,8 @@
 # docker-compose.staging-server.yml
-# Серверный staging (VPS): реальный домен, SSL, сетевые условия как на проде
-# На staging сервере: docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d --build
+# Серверный staging (VPS): два окружения на одном сервере, разные порты
+# Фронт (чат): http://34.140.213.8:8081
+# Админка:     http://34.140.213.8:8082
+# Запуск: docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d --build
 version: '3.8'
 
 services:
@@ -33,7 +35,7 @@ services:
       DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY_STAGING}
       PORT: "4001"
       NODE_ENV: staging
-      FRONTEND_URL: https://staging.anita-psy.online
+      FRONTEND_URL: "http://34.140.213.8:8081"
       DAILY_MESSAGE_LIMIT: ${DAILY_MESSAGE_LIMIT:-50}
     depends_on:
       postgres:
@@ -46,11 +48,8 @@ services:
       dockerfile: frontend/Dockerfile.staging-server
     container_name: anita-frontend-staging-srv
     ports:
-      - "8081:80"
-      - "4431:443"
-    volumes:
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - /var/www/certbot:/var/www/certbot:ro
+      - "8081:80"    # фронт (чат клиентов)
+      - "8082:8082"  # админка
     depends_on:
       - backend
     restart: always
