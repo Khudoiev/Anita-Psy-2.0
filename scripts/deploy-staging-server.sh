@@ -38,8 +38,8 @@ sleep 5
 
 echo -e "${YELLOW}📦 Деплоим на сервере (загружаем образ из GHCR)...${NC}"
 
-# Путь на сервере: /home/aleks90715/Anita Production 2.1
-ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/Anita Production 2.1' && \
+# Путь на сервере: /home/aleks90715/anita-psy-staging
+ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/anita-psy-staging' && \
   git checkout staging && \
   git pull origin staging && \
   docker pull ghcr.io/khudoiev/anita-psy-2.0-backend:staging-latest && \
