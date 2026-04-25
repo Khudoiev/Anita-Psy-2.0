@@ -150,23 +150,15 @@ async function buildSystemPrompt(userId) {
 
   let prompt = ANITA_BASE_PROMPT;
 
-  try {
-    const overrides = await getActivePromptOverrides();
-    for (const override of overrides) {
-      if (override.type === 'append') prompt += '\n\n' + override.text;
-      if (override.type === 'replace') prompt = prompt.replace(override.find, override.replacement);
-    }
-  } catch (e) {
-    // promptEvolution table may not exist yet
+  const overrides = await getActivePromptOverrides();
+  for (const override of overrides) {
+    if (override.type === 'append') prompt += '\n\n' + override.text;
+    if (override.type === 'replace') prompt = prompt.replace(override.find, override.replacement);
   }
 
   if (userId) {
-    try {
-      const memoryCtx = await getUserMemoryContext(userId);
-      if (memoryCtx) prompt += '\n\n' + memoryCtx;
-    } catch (e) {
-      // user_memory table may not exist yet
-    }
+    const memoryCtx = await getUserMemoryContext(userId);
+    if (memoryCtx) prompt += '\n\n' + memoryCtx;
   }
 
   return prompt;

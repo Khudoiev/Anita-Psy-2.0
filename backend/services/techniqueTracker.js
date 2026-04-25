@@ -17,19 +17,15 @@ async function detectAndSaveTechniques(responseText, conversationId, sessionTurn
   if (!conversationId) return;
 
   // Check consent before saving analytics
-  try {
-    const convRes = await db.query(
-      'SELECT user_id FROM conversations WHERE id=$1', [conversationId]
+  const convRes = await db.query(
+    'SELECT user_id FROM conversations WHERE id=$1', [conversationId]
+  );
+  if (convRes.rows.length) {
+    const userId = convRes.rows[0].user_id;
+    const consent = await db.query(
+      'SELECT ai_improvement FROM user_consent WHERE user_id=$1', [userId]
     );
-    if (convRes.rows.length) {
-      const userId = convRes.rows[0].user_id;
-      const consent = await db.query(
-        'SELECT ai_improvement FROM user_consent WHERE user_id=$1', [userId]
-      );
-      if (!consent.rows[0]?.ai_improvement) return;
-    }
-  } catch (e) {
-    return; // tables may not exist yet
+    if (!consent.rows[0]?.ai_improvement) return;
   }
 
   for (const [technique, patterns] of Object.entries(TECHNIQUE_MARKERS)) {

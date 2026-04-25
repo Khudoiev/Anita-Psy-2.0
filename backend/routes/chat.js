@@ -81,10 +81,8 @@ router.post('/', requireAuth, async (req, res) => {
 
     // Track token usage if available
     if (data.usage && conversationId) {
-      try {
-        const { trackTokenUsage } = require('../services/tokenTracker');
-        await trackTokenUsage(userId, data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
-      } catch (e) { /* table may not exist yet */ }
+      const { trackTokenUsage } = require('../services/tokenTracker');
+      await trackTokenUsage(userId, data.usage.prompt_tokens || 0, data.usage.completion_tokens || 0);
     }
 
     return res.json(data);
@@ -121,12 +119,10 @@ router.post('/stream', requireAuth, async (req, res) => {
   }
 
   // Crisis detection
-  try {
-    const { checkAndLogCrisis } = require('../services/safetyChecker');
-    const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content || '';
-    const { isCrisis, systemInjection } = await checkAndLogCrisis(lastUserMessage, userId, conversationId);
-    if (isCrisis) systemPrompt += systemInjection;
-  } catch (e) { /* safety table may not exist yet */ }
+  const { checkAndLogCrisis } = require('../services/safetyChecker');
+  const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content || '';
+  const { isCrisis, systemInjection } = await checkAndLogCrisis(lastUserMessage, userId, conversationId);
+  if (isCrisis) systemPrompt += systemInjection;
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -166,14 +162,12 @@ router.post('/stream', requireAuth, async (req, res) => {
         if (!line.startsWith('data: ')) continue;
         const data = line.slice(6);
         if (data === '[DONE]') {
-          try {
-            if (conversationId) {
-              const { detectAndSaveTechniques } = require('../services/techniqueTracker');
-              await detectAndSaveTechniques(fullContent, conversationId, Math.ceil(messages.length / 2));
-            }
-            const { trackTokenUsage } = require('../services/tokenTracker');
-            await trackTokenUsage(userId, promptTokens, completionTokens);
-          } catch (e) { /* tables may not exist yet */ }
+          if (conversationId) {
+            const { detectAndSaveTechniques } = require('../services/techniqueTracker');
+            await detectAndSaveTechniques(fullContent, conversationId, Math.ceil(messages.length / 2));
+          }
+          const { trackTokenUsage } = require('../services/tokenTracker');
+          await trackTokenUsage(userId, promptTokens, completionTokens);
           res.write('data: [DONE]\n\n');
           return res.end();
         }

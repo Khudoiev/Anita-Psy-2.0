@@ -42,6 +42,7 @@ echo -e "${YELLOW}📦 Деплоим на сервере (загружаем о
 ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/Anita Production 2.1' && \
   git pull origin main && \
   docker pull ghcr.io/khudoiev/anita-psy-2.0-backend:main-latest && \
-  docker-compose -f docker-compose.yml up -d"
+  docker-compose -f docker-compose.yml up -d && \
+  docker exec anita-backend npm run migrate:up"
 
 echo -e "${GREEN}✅ Деплой успешно завершен!${NC}"

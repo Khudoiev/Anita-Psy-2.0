@@ -1,0 +1,20 @@
+﻿7558812 chore: ignore .claude settings
+41d801b chore: ignore .claude settings
+7475108 fix: CORS blocks admin login on separate port + dotenv path for local dev
+13cabe0 fix: split frontend/admin to separate ports, fix staging nginx, add Makefile
+a1f6331 fix: allow staging access via IP (since DNS is not set)
+6dd6f9c fix: change staging ports to 8081/4431 to avoid conflict
+3b730dd fix: correct build context and schema path in staging-server docker-compose
+c6e47d8 chore: ignore .claude settings
+4e5b669 fix: CORS blocks admin login on separate port + dotenv path for local dev
+7f38332 fix: split frontend/admin to separate ports, fix staging nginx, add Makefile
+a2ecb71 fix: allow staging access via IP (since DNS is not set)
+e69fa28 fix: change staging ports to 8081/4431 to avoid conflict
+debced8 fix: correct build context and schema path in staging-server docker-compose
+467ed94 Merge pull request #1 from Khudoiev/develop
+cb6c136 feat: add server-side staging environment
+6dedece fix: configure local staging environment and fix broken deploy paths
+10c970b Refactor: cleanup project structure
+5e059a4 feat: implement heartbeat system, fix syntax error, and update db migration logic
+0916672 Initial commit Anita AI (Full Setup + Security)
+8515ca5 Initial commit

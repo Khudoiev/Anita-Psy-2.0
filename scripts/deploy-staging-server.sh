@@ -43,6 +43,7 @@ ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/Anita Production 2
   git checkout staging && \
   git pull origin staging && \
   docker pull ghcr.io/khudoiev/anita-psy-2.0-backend:staging-latest && \
-  docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d"
+  docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d && \
+  docker exec anita-backend-staging-srv npm run migrate:up"
 
 echo -e "${GREEN}✅ Staging деплой успешно завершен!${NC}"
