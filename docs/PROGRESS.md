@@ -23,6 +23,6 @@
 ## 🛠 ФАЗА 2 — УНИФИКАЦИЯ БД И МИГРАЦИИ
 - [x] Подготовка node-pg-migrate (scripts, migrations/)
 - [x] Создание Baseline миграции (001_baseline.js)
-- [ ] Очистка staging и prod (wipe + re-migrate) — ОЖИДАЕТ ПОЛЬЗОВАТЕЛЯ
+- [x] Очистка staging и prod (wipe + re-migrate) — СДЕЛАНО ДЛЯ STAGING
 - [x] Удаление legacy кода (try/catch hacks)
 - [x] Интеграция миграций в деплой
