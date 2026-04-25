@@ -14,13 +14,13 @@ services:
       - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/schema.sql
     restart: always
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U anita"]
+      test: [ "CMD-SHELL", "pg_isready -U anita" ]
       interval: 5s
       timeout: 5s
       retries: 5
 
   backend:
-    image: ghcr.io/khudoiev/anita-psy-2.0-backend:main-latest
+    image: ghcr.io/khudoiev/anita-psy-2.0-backend:maint-latest
     container_name: anita-backend
     env_file: .env
     environment:
@@ -30,6 +30,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    volumes:
+      - ./backend/migrations:/app/migrations
+      - ./backend/routes:/app/routes
+      - ./backend/services:/app/services
+      - ./backend/prompts:/app/prompts
     restart: always
 
   frontend:
