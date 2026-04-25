@@ -147,6 +147,7 @@ exports.up = (pgm) => {
       is_active boolean DEFAULT true,
       last_heartbeat timestamp without time zone DEFAULT now()
     );
+    ALTER TABLE sessions ADD COLUMN IF NOT EXISTS last_heartbeat timestamp without time zone DEFAULT now();
 
     CREATE TABLE IF NOT EXISTS technique_outcomes (
       id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
