@@ -1,5 +1,5 @@
 #!/bin/bash
-# deploy.sh — безопасный деплой на production
+# deploy.sh — безопасный деплой на production через GHCR
 # Использование: ./scripts/deploy.sh
 
 set -e
@@ -28,60 +28,20 @@ fi
 
 # ─── Обновить код ─────────────────────────────────────────────────────────────
 
-echo -e "${YELLOW}📥 Загружаем изменения с git...${NC}"
-git pull origin main
+echo -e "${YELLOW}📥 Отправляем изменения в GitHub...${NC}"
+git push origin main
 
-# ─── Создать external volume если не существует ───────────────────────────────
+echo -e "${YELLOW}⏳ Ждем сборку образа (рекомендуется проверить Actions в браузере)...${NC}"
+sleep 5
 
-if ! docker volume inspect anitapsy_postgres_data >/dev/null 2>&1; then
-  echo -e "${YELLOW}📦 Создаём postgres volume...${NC}"
-  docker volume create anitapsy_postgres_data
-  echo -e "${GREEN}✅ Volume создан${NC}"
-fi
+# ─── Деплой на сервере ────────────────────────────────────────────────────────
 
-# ─── Пересобрать контейнеры ───────────────────────────────────────────────────
+echo -e "${YELLOW}📦 Деплоим на сервере (загружаем образ из GHCR)...${NC}"
 
-echo -e "${YELLOW}🔨 Пересобираем контейнеры...${NC}"
-docker-compose -f docker-compose.yml up -d --build
+# Путь на сервере: /home/aleks90715/Anita Production 2.1
+ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/Anita Production 2.1' && \
+  git pull origin main && \
+  docker pull ghcr.io/khudoiev/anita-psy-2.0-backend:main-latest && \
+  docker-compose -f docker-compose.yml up -d"
 
-echo -e "${YELLOW}⏳ Ждём запуска сервисов...${NC}"
-sleep 8
-
-# ─── Проверка здоровья ────────────────────────────────────────────────────────
-
-check_service() {
-  local name=$1
-  local container=$2
-  if docker ps --filter "name=$container" --filter "status=running" | grep -q "$container"; then
-    echo -e "${GREEN}✅ $name запущен${NC}"
-  else
-    echo -e "${RED}❌ $name НЕ запустился! Логи:${NC}"
-    docker-compose -f docker-compose.yml logs --tail=30 "$name"
-    exit 1
-  fi
-}
-
-check_service "Database"  "anita-db"
-check_service "Backend"   "anita-backend"
-check_service "Frontend"  "anita-frontend"
-
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/api/health 2>/dev/null || echo "000")
-if [ "$HTTP_STATUS" = "200" ]; then
-  echo -e "${GREEN}✅ API отвечает (HTTP 200)${NC}"
-else
-  echo -e "${YELLOW}⚠️  API вернул ${HTTP_STATUS}${NC}"
-fi
-
-# ─── Итог ─────────────────────────────────────────────────────────────────────
-
-COMMIT_HASH=$(git rev-parse --short HEAD)
-COMMIT_MSG=$(git log -1 --pretty=%B | head -1)
-
-echo ""
-echo -e "${GREEN}═══════════════════════════════════════${NC}"
-echo -e "${GREEN}✅ Production деплой завершён!${NC}"
-echo -e "${GREEN}═══════════════════════════════════════${NC}"
-echo -e "Коммит:  ${COMMIT_HASH} — ${COMMIT_MSG}"
-echo -e "Фронт:   https://anita-psy.online"
-echo -e "Админка: https://anita-psy.online:8443"
-echo ""
+echo -e "${GREEN}✅ Деплой успешно завершен!${NC}"

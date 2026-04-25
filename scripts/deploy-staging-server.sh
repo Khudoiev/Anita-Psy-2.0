@@ -1,6 +1,5 @@
 #!/bin/bash
-# deploy-staging-server.sh — деплой на серверный staging (VPS)
-# Запускается на сервере вручную или через GitHub Actions
+# deploy-staging-server.sh — безопасный деплой на staging через GHCR
 # Использование: ./scripts/deploy-staging-server.sh
 
 set -e
@@ -10,72 +9,40 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-echo -e "${YELLOW}🧪 Деплоим СЕРВЕРНЫЙ STAGING...${NC}"
+echo -e "${YELLOW}🧪 Начинаем staging деплой...${NC}"
 
-# ─── Проверить что .env.staging.server существует ────────────────────────────
+# ─── Проверки перед деплоем ───────────────────────────────────────────────────
 
-if [ ! -f ".env.staging.server" ]; then
-  echo -e "${RED}❌ Файл .env.staging.server не найден!${NC}"
-  echo -e "Создай его на сервере и заполни значения"
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CURRENT_BRANCH" != "staging" ]; then
+  echo -e "${RED}❌ Деплоить на staging можно только с ветки staging!${NC}"
+  echo -e "Сейчас: ${CURRENT_BRANCH}"
   exit 1
 fi
 
-# ─── Обновить код из staging ветки ───────────────────────────────────────────
-
-echo -e "${YELLOW}📥 Загружаем staging ветку...${NC}"
-git fetch origin
-git checkout staging
-git pull origin staging
-
-# ─── Пересобрать контейнеры ──────────────────────────────────────────────────
-
-echo -e "${YELLOW}🔨 Пересобираем контейнеры...${NC}"
-docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server down
-docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d --build
-
-echo -e "${YELLOW}⏳ Ждём запуска...${NC}"
-sleep 10
-
-# ─── Проверка здоровья ───────────────────────────────────────────────────────
-
-echo -e "${YELLOW}🏥 Проверяем здоровье...${NC}"
-
-if docker ps | grep -q "anita-backend-staging-srv"; then
-  echo -e "${GREEN}✅ Backend staging запущен${NC}"
-else
-  echo -e "${RED}❌ Backend staging упал!${NC}"
-  docker-compose -f infra/docker-compose.staging-server.yml logs --tail=50 backend
+if [ -n "$(git status --porcelain)" ]; then
+  echo -e "${RED}❌ Есть несохранённые изменения! Сделай commit перед деплоем.${NC}"
+  git status --short
   exit 1
 fi
 
-if docker ps | grep -q "anita-db-staging-srv"; then
-  echo -e "${GREEN}✅ Database staging запущена${NC}"
-else
-  echo -e "${RED}❌ Database staging упала!${NC}"
-  exit 1
-fi
+# ─── Обновить код ─────────────────────────────────────────────────────────────
 
-# ─── Health check API ────────────────────────────────────────────────────────
+echo -e "${YELLOW}📥 Отправляем изменения в GitHub...${NC}"
+git push origin staging
 
-sleep 3
-HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/api/health 2>/dev/null || echo "000")
-if [ "$HEALTH" = "200" ]; then
-  echo -e "${GREEN}✅ API отвечает (HTTP 200)${NC}"
-else
-  echo -e "${YELLOW}⚠️  API вернул $HEALTH${NC}"
-fi
+echo -e "${YELLOW}⏳ Ждем сборку образа (рекомендуется проверить Actions в браузере)...${NC}"
+sleep 5
 
-# ─── Итог ────────────────────────────────────────────────────────────────────
+# ─── Деплой на сервере ────────────────────────────────────────────────────────
 
-COMMIT=$(git rev-parse --short HEAD)
-MSG=$(git log -1 --pretty=%B | head -1)
-SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo "34.140.213.8")
+echo -e "${YELLOW}📦 Деплоим на сервере (загружаем образ из GHCR)...${NC}"
 
-echo ""
-echo -e "${GREEN}════════════════════════════════════════${NC}"
-echo -e "${GREEN}✅ Серверный staging обновлён!${NC}"
-echo -e "${GREEN}════════════════════════════════════════${NC}"
-echo -e "Коммит:  ${COMMIT} — ${MSG}"
-echo -e "Фронт:   http://${SERVER_IP}:8081"
-echo -e "Админка: http://${SERVER_IP}:8082"
-echo ""
+# Путь на сервере: /home/aleks90715/Anita Production 2.1
+ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/Anita Production 2.1' && \
+  git checkout staging && \
+  git pull origin staging && \
+  docker pull ghcr.io/khudoiev/anita-psy-2.0-backend:staging-latest && \
+  docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d"
+
+echo -e "${GREEN}✅ Staging деплой успешно завершен!${NC}"

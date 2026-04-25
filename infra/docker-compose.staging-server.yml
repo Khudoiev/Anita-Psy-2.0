@@ -24,9 +24,7 @@ services:
     restart: always
 
   backend:
-    build:
-      context: ..
-      dockerfile: backend/Dockerfile
+    image: ghcr.io/khudoiev/anita-psy-2.0-backend:staging-latest
     container_name: anita-backend-staging-srv
     environment:
       DATABASE_URL: postgresql://anita_staging:${DB_PASSWORD_STAGING}@postgres:5432/anita_staging

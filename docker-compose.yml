@@ -20,9 +20,7 @@ services:
       retries: 5
 
   backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
+    image: ghcr.io/khudoiev/anita-psy-2.0-backend:main-latest
     container_name: anita-backend
     env_file: .env
     environment:
