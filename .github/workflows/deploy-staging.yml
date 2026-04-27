@@ -5,13 +5,17 @@ name: Deploy to Staging Server
 # Серверный staging — этот workflow деплоит автоматически через SSH
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Build and Push Docker Image"]
+    types:
+      - completed
     branches: [staging]
 
 jobs:
   # ─── 1. Проверка синтаксиса ────────────────────────────────────────────────
   build-check:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout code
@@ -45,9 +49,21 @@ jobs:
           script: |
             cd /home/aleks90715/anita-psy-staging
             git pull origin staging
+            # Пул нового образа (уже запушенного build.yml)
             docker pull ghcr.io/khudoiev/anita-psy-2.0-backend:staging-latest
+            # Перезапуск контейнеров
             docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d --build
-            docker exec anita-backend-staging-srv npm run migrate:up
+            # Ждем готовности бэкенда перед миграциями (до 30 секунд)
+            echo "Waiting for backend to be ready..."
+            for i in {1..30}; do
+              if [ "$(docker inspect -f '{{.State.Running}}' anita-backend-staging-srv)" == "true" ]; then
+                echo "Backend is running, executing migrations..."
+                docker exec anita-backend-staging-srv npm run migrate:up
+                break
+              fi
+              echo "Waiting..."
+              sleep 1
+            done
 
       - name: Notify success
         if: success()
