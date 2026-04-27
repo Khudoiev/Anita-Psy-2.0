@@ -58,6 +58,8 @@ jobs:
             for i in {1..30}; do
               if [ "$(docker inspect -f '{{.State.Running}}' anita-backend-staging-srv)" == "true" ]; then
                 echo "Backend is running, executing migrations..."
+                docker exec anita-db-staging-srv psql -U anita_staging -d anita_staging \
+                  -c "UPDATE pgmigrations SET name='1714051200001_fix_users_schema' WHERE name='1714051200001_performance_indexes';"
                 docker exec anita-backend-staging-srv npm run migrate:up
                 break
               fi
