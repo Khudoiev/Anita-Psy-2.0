@@ -43,8 +43,11 @@ jobs:
           username: ${{ secrets.STAGING_SSH_USER }}
           key:      ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
           script: |
-            cd ~/anita-psy-staging
-            ./scripts/deploy-staging-server.sh
+            cd /home/aleks90715/anita-psy-staging
+            git pull origin staging
+            docker pull ghcr.io/khudoiev/anita-psy-2.0-backend:staging-latest
+            docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d --build
+            docker exec anita-backend-staging-srv npm run migrate:up
 
       - name: Notify success
         if: success()
