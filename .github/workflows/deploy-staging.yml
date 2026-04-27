@@ -5,17 +5,13 @@ name: Deploy to Staging Server
 # Серверный staging — этот workflow деплоит автоматически через SSH
 
 on:
-  workflow_run:
-    workflows: ["Build and Push Docker Image"]
-    types:
-      - completed
+  push:
     branches: [staging]
 
 jobs:
   # ─── 1. Проверка синтаксиса ────────────────────────────────────────────────
   build-check:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout code
