@@ -32,6 +32,7 @@ jobs:
       NODE_ENV: test
       DAILY_MESSAGE_LIMIT: 100
       GROK_API_KEY: test-key-not-real
+      DB_ENCRYPTION_KEY: ci-test-encryption-key-32-chars-!
 
     steps:
       - name: Checkout repository

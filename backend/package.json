@@ -14,7 +14,7 @@
   "jest": {
     "testEnvironment": "node",
     "testTimeout": 30000,
-    "testPathPattern": "__tests__",
+    "testPathPattern": "__tests__/.*\\.test\\.js",
     "coverageDirectory": "coverage",
     "collectCoverageFrom": [
       "routes/**/*.js",
