@@ -102,7 +102,7 @@ exports.up = (pgm) => {
 
     CREATE TABLE IF NOT EXISTS crisis_events (
       id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-      user_id uuid REFERENCES users(id),
+      user_id uuid REFERENCES users(id) ON DELETE CASCADE,
       conversation_id uuid REFERENCES conversations(id),
       trigger_phrase text,
       response_given text,
@@ -121,7 +121,7 @@ exports.up = (pgm) => {
 
     CREATE TABLE IF NOT EXISTS message_quota (
       id SERIAL PRIMARY KEY,
-      user_id uuid NOT NULL REFERENCES users(id),
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       date date DEFAULT CURRENT_DATE NOT NULL,
       count integer DEFAULT 0 NOT NULL,
       UNIQUE(user_id, date)
@@ -139,7 +139,7 @@ exports.up = (pgm) => {
 
     CREATE TABLE IF NOT EXISTS sessions (
       id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-      user_id uuid REFERENCES users(id),
+      user_id uuid REFERENCES users(id) ON DELETE CASCADE,
       started_at timestamp without time zone DEFAULT now(),
       ended_at timestamp without time zone,
       duration_seconds integer,
@@ -206,6 +206,16 @@ exports.up = (pgm) => {
       approved_at timestamp without time zone,
       applied_at timestamp without time zone
     );
+
+    CREATE TABLE IF NOT EXISTS temp_bans (
+      id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      admin_id uuid REFERENCES admins(id),
+      reason text,
+      expires_at timestamp without time zone,
+      unbanned_at timestamp without time zone,
+      created_at timestamp without time zone DEFAULT now()
+    );
   `);
 
   // 3. Indexes
@@ -239,6 +249,7 @@ exports.down = (pgm) => {
   pgm.sql('DROP MATERIALIZED VIEW IF EXISTS technique_stats');
   pgm.sql('DROP TABLE IF EXISTS prompt_suggestions CASCADE');
   pgm.sql('DROP TABLE IF EXISTS user_memory CASCADE');
+  pgm.sql('DROP TABLE IF EXISTS temp_bans CASCADE');
   pgm.sql('DROP TABLE IF EXISTS user_consent CASCADE');
   pgm.sql('DROP TABLE IF EXISTS token_usage CASCADE');
   pgm.sql('DROP TABLE IF EXISTS technique_outcomes CASCADE');

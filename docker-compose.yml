@@ -20,7 +20,9 @@ services:
       retries: 5
 
   backend:
-    image: ghcr.io/khudoiev/anita-psy-2.0-backend:maint-latest
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: anita-backend
     env_file: .env
     environment:
@@ -35,6 +37,10 @@ services:
       - ./backend/routes:/app/routes
       - ./backend/services:/app/services
       - ./backend/prompts:/app/prompts
+      - ./backend/middleware:/app/middleware
+      - ./backend/__tests__:/app/__tests__
+      - ./backend/app.js:/app/app.js
+      - ./backend/package.json:/app/package.json
     restart: always
 
   frontend:

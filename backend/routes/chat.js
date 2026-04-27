@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const logger = require('../services/logger');
 const { requireAuth } = require('../middleware/requireAuth');
 const { buildSystemPrompt, MEMORY_EXTRACT_PROMPT } = require('../prompts/anita');
 const { buildContextWindow } = require('../services/contextManager');
@@ -73,7 +74,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      console.error('[xAI API Error]', response.status, errData);
+      logger.error({ status: response.status, errData, userId }, 'xAI API Error');
       return res.status(502).json({ error: 'Ошибка AI сервиса', details: errData });
     }
 
@@ -87,7 +88,7 @@ router.post('/', requireAuth, async (req, res) => {
 
     return res.json(data);
   } catch (err) {
-    console.error('[Proxy Error]', err);
+    logger.error({ err, userId, conversationId }, 'Chat Request Error');
     return res.status(500).json({ error: 'Ошибка сервера при обращении к AI' });
   }
 });
@@ -187,7 +188,7 @@ router.post('/stream', requireAuth, async (req, res) => {
     }
     res.end();
   } catch (err) {
-    console.error('[Stream Error]', err);
+    logger.error({ err, userId, conversationId }, 'Chat Stream Error');
     res.write(`data: ${JSON.stringify({ error: 'SERVER_ERROR' })}\n\n`);
     res.end();
   }

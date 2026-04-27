@@ -45,6 +45,7 @@ function timeAgo(dateString) {
 
 let usersData = [];
 let currentUserId = null;
+let charts = { dau: null, tokens: null };
 
 // --- AUTH ---
 function checkAuth() {
@@ -80,15 +81,15 @@ ui.tabsNav.addEventListener('click', e => {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
     ui.tabContents.forEach(t => t.classList.remove('active'));
     e.target.classList.add('active');
-    document.getElementById(e.target.dataset.tab).classList.add('active');
+    const tabId = e.target.dataset.tab;
+    document.getElementById(tabId).classList.add('active');
     
     // Lazy load tab data
-    const tId = e.target.dataset.tab;
-    if (tId === 'tab-analytics') loadAnalytics();
-    if (tId === 'tab-geo') loadGeo();
-    if (tId === 'tab-security') loadBlacklist();
-    if (tId === 'tab-logs') loadLogs();
-    if (tId === 'tab-evolution') loadEvolution();
+    if (tabId === 'tab-analytics') loadAnalytics();
+    if (tabId === 'tab-geo') loadGeo();
+    if (tabId === 'tab-security') loadBlacklist();
+    if (tabId === 'tab-logs') loadLogs();
+    if (tabId === 'tab-evolution') loadEvolution();
   }
 });
 
@@ -102,6 +103,7 @@ async function loadDashboard() {
     document.getElementById('stat-hours').textContent = stats.totalHours;
     loadInvites();
     loadUsers();
+    
     // Token stats (non-blocking)
     apiCall('GET', '/admin/token-stats').then(rows => {
       if (rows?.length) {
@@ -121,12 +123,12 @@ async function loadInvites() {
     const link = `${window.location.origin}/?invite=${inv.token}`;
     tr.innerHTML = `
       <td>${inv.label || '—'}</td>
-      <td><input type="text" value="${link}" readonly style="background:transparent; color:#5ba8e0; border:none; outline:none; width:150px;"></td>
+      <td><input type="text" value="${link}" readonly style="background:transparent; border:none; outline:none; width:200px; color:var(--accent-primary)"></td>
       <td>${inv.uses_count} / ${inv.max_uses}</td>
-      <td>${inv.is_active ? '✅' : '❌'}</td>
+      <td><span class="badge ${inv.is_active ? 'badge-online' : 'badge-offline'}">${inv.is_active ? 'Активен' : 'Отключен'}</span></td>
       <td>
         <button onclick="window.toggleInvite('${inv.id}')" class="secondary">${inv.is_active ? 'Деактив.' : 'Актив.'}</button>
-        <button onclick="window.deleteInvite('${inv.id}')" style="background:#ff6b6b">Удалить</button>
+        <button onclick="window.deleteInvite('${inv.id}')" style="background:rgba(239, 68, 68, 0.1); color:var(--danger)">Удалить</button>
       </td>
     `;
     ui.invitesTable.appendChild(tr);
@@ -142,17 +144,21 @@ function renderUsers() {
     (u.ip && u.ip.includes(q))
   ).forEach(u => {
     const tr = document.createElement('tr');
-    const flag = u.country_code ? `<img src="https://flagcdn.com/24x18/${u.country_code.toLowerCase()}.png" alt="${u.country}" style="vertical-align:middle;margin-right:5px">` : '🏳️';
+    const flag = u.country_code ? `<img src="https://flagcdn.com/24x18/${u.country_code.toLowerCase()}.png" alt="${u.country}" style="vertical-align:middle;margin-right:5px; border-radius:2px">` : '🏳️';
     tr.innerHTML = `
-      <td>${u.nickname || '—'}</td>
+      <td><strong>${u.nickname || '—'}</strong></td>
       <td>${flag} ${u.country || 'Unknown'}</td>
-      <td>${u.device_type} / ${u.browser}</td>
-      <td>${u.inviteLabel || '—'}</td>
-      <td>${new Date(u.firstSeen).toLocaleDateString()}</td>
-      <td title="${new Date(u.lastSeen).toLocaleString()}">${timeAgo(u.lastSeen)}</td>
+      <td style="font-size:0.8rem; color:var(--text-muted)">${u.device_type} / ${u.browser}</td>
+      <td><span style="font-size:0.8rem">${u.inviteLabel || '—'}</span></td>
+      <td style="font-size:0.8rem">${new Date(u.firstSeen).toLocaleDateString()}</td>
+      <td style="font-size:0.8rem" title="${new Date(u.lastSeen).toLocaleString()}">${timeAgo(u.lastSeen)}</td>
       <td>${u.totalSessions}</td>
-      <td>${parseFloat(u.totalHours).toFixed(1)}</td>
-      <td>${u.isOnline ? '<span class="online-dot">● Онлайн</span>' : '<span class="offline-dot">● Оффлайн</span>'}</td>
+      <td>${parseFloat(u.totalHours).toFixed(1)}h</td>
+      <td>
+        <span class="badge ${u.is_blocked ? 'badge-blocked' : (u.isOnline ? 'badge-online' : 'badge-offline')}">
+          ${u.is_blocked ? 'Забанен' : (u.isOnline ? '● Онлайн' : 'Оффлайн')}
+        </span>
+      </td>
       <td>
         <button onclick="window.openUserModal('${u.id}')" class="secondary">Детали</button>
       </td>
@@ -161,9 +167,9 @@ function renderUsers() {
   });
 }
 
-// ─── Живой поиск по нику (с debounce) ───────────────────────────────────────
+// ─── Поиск по нику ───────────────────────────────────────
 let _searchTimeout = null;
-let _allUsersCache = []; // кэш полного списка
+let _allUsersCache = [];
 
 async function loadUsers() {
   usersData = await apiCall('GET', '/admin/users');
@@ -186,25 +192,26 @@ document.getElementById('user-search').addEventListener('input', async e => {
     try {
       usersData = await apiCall('GET', `/admin/users/search?q=${encodeURIComponent(q)}`);
       renderUsers();
-    } catch (err) {
-      console.error('[Search]', err);
-    }
+    } catch (err) { console.error('[Search]', err); }
   }, 300);
 });
 
-// --- TABS DATA FETCH ---
+// --- ANALYTICS ---
 async function loadAnalytics() {
   const hourly = await apiCall('GET', '/admin/analytics/hourly');
+  const daily = await apiCall('GET', '/admin/analytics/daily');
   const ret = await apiCall('GET', '/admin/analytics/retention');
   const invites = await apiCall('GET', '/admin/analytics/invites');
+  const tokens = await apiCall('GET', '/admin/token-stats');
   
   if(ret.total > 0) {
-    const pсt = Math.round((ret.returned_day1 / ret.total) * 100);
-    document.getElementById('retention-info').innerHTML = `Вернулись минимум 2 раза: <strong>${pсt}%</strong> (${ret.returned_day1} из ${ret.total})`;
+    const pct = Math.round((ret.returned_day1 / ret.total) * 100);
+    document.getElementById('retention-info').innerHTML = `Вернулись минимум 2 раза: <strong style="color:var(--success)">${pct}%</strong> (${ret.returned_day1} из ${ret.total})`;
   } else {
     document.getElementById('retention-info').innerHTML = `Мало данных для расчета Retention`;
   }
 
+  // Hourly Heatmap
   const hc = document.getElementById('hourly-heatmap');
   hc.innerHTML = '';
   const maxSess = Math.max(...hourly.map(h => parseInt(h.sessions_count)), 1);
@@ -218,10 +225,62 @@ async function loadAnalytics() {
     hc.appendChild(hBar);
   });
 
+  // Invites Analytics
   const tb = document.querySelector('#analytics-invites-table tbody');
   tb.innerHTML = '';
   invites.forEach(i => {
-    tb.innerHTML += `<tr><td>${i.label || '—'}</td><td>${i.token.substring(0,8)}...</td><td>${i.total_users}</td><td>${i.avg_sessions_per_user || 0}</td><td>${i.avg_messages_per_user || 0}</td></tr>`;
+    tb.innerHTML += `<tr><td><strong>${i.label || '—'}</strong></td><td style="font-family:monospace; font-size:0.8rem">${i.token.substring(0,8)}...</td><td>${i.total_users}</td><td>${i.avg_sessions_per_user || 0}</td><td>${i.avg_messages_per_user || 0}</td></tr>`;
+  });
+
+  // Charts
+  renderCharts(daily, tokens);
+}
+
+function renderCharts(daily, tokens) {
+  // DAU Chart
+  const dauCtx = document.getElementById('chart-dau').getContext('2d');
+  if (charts.dau) charts.dau.destroy();
+  const dailyRows = [...daily].reverse();
+  charts.dau = new Chart(dauCtx, {
+    type: 'line',
+    data: {
+      labels: dailyRows.map(r => new Date(r.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })),
+      datasets: [{
+        label: 'DAU (Активные пользователи)',
+        data: dailyRows.map(r => r.dau),
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        tension: 0.4,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } }
+    }
+  });
+
+  // Token Chart
+  const tokensCtx = document.getElementById('chart-tokens').getContext('2d');
+  if (charts.tokens) charts.tokens.destroy();
+  const tokenRows = [...tokens].reverse();
+  charts.tokens = new Chart(tokensCtx, {
+    type: 'bar',
+    data: {
+      labels: tokenRows.map(r => new Date(r.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })),
+      datasets: [{
+        label: 'Всего токенов',
+        data: tokenRows.map(r => r.total_all),
+        backgroundColor: '#8b5cf6',
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } }
+    }
   });
 }
 
@@ -229,8 +288,8 @@ async function loadGeo() {
   const geo = await apiCall('GET', '/admin/geo');
   ui.geoTable.innerHTML = '';
   geo.forEach(g => {
-    const flag = g.country_code ? `<img src="https://flagcdn.com/24x18/${g.country_code.toLowerCase()}.png" alt="${g.country}" style="vertical-align:middle;margin-right:5px">` : '🏳️';
-    ui.geoTable.innerHTML += `<tr><td>${flag} ${g.country}</td><td>${g.count}</td><td class="online-dot">${g.online > 0 ? g.online : ''}</td></tr>`;
+    const flag = g.country_code ? `<img src="https://flagcdn.com/24x18/${g.country_code.toLowerCase()}.png" alt="${g.country}" style="vertical-align:middle;margin-right:5px; border-radius:2px">` : '🏳️';
+    ui.geoTable.innerHTML += `<tr><td><strong>${flag} ${g.country}</strong></td><td>${g.count}</td><td><span class="badge badge-online">${g.online > 0 ? g.online : '—'}</span></td></tr>`;
   });
 }
 
@@ -238,7 +297,7 @@ async function loadBlacklist() {
   const list = await apiCall('GET', '/admin/blacklist');
   ui.blacklistTable.innerHTML = '';
   list.forEach(i => {
-    ui.blacklistTable.innerHTML += `<tr><td>${i.ip}</td><td>${i.reason || '—'}</td><td>${i.admin || '—'}</td><td>${new Date(i.created_at).toLocaleDateString()}</td><td><button style="background:#ff6b6b" onclick="window.delBlacklist('${i.id}')">Удалить</button></td></tr>`;
+    ui.blacklistTable.innerHTML += `<tr><td><strong>${i.ip}</strong></td><td>${i.reason || '—'}</td><td>${i.admin || '—'}</td><td>${new Date(i.created_at).toLocaleDateString()}</td><td><button style="background:rgba(239, 68, 68, 0.1); color:var(--danger)" onclick="window.delBlacklist('${i.id}')">Удалить</button></td></tr>`;
   });
 }
 
@@ -246,7 +305,13 @@ async function loadLogs() {
   const logs = await apiCall('GET', '/admin/logs');
   ui.logsTable.innerHTML = '';
   logs.forEach(l => {
-    ui.logsTable.innerHTML += `<tr><td>${new Date(l.created_at).toLocaleString()}</td><td>${l.admin}</td><td>${l.action}</td><td>${l.target_type} #${l.target_id}</td><td><pre style="margin:0;font-size:11px;">${JSON.stringify(l.details)}</pre></td></tr>`;
+    ui.logsTable.innerHTML += `<tr>
+      <td><span style="font-size:0.8rem; color:var(--text-muted)">${new Date(l.created_at).toLocaleString()}</span></td>
+      <td><strong>${l.admin}</strong></td>
+      <td><span class="badge badge-online">${l.action}</span></td>
+      <td><span style="font-size:0.8rem">${l.target_type} #${l.target_id.slice(0,8)}...</span></td>
+      <td><pre style="margin:0;font-size:10px; color:var(--text-dim)">${JSON.stringify(l.details)}</pre></td>
+    </tr>`;
   });
 }
 
@@ -269,71 +334,63 @@ document.getElementById('save-invite-btn').addEventListener('click', async () =>
   document.getElementById('new-invite-link-container').style.display = 'block';
   loadInvites();
 });
+
 document.getElementById('copy-link-btn').addEventListener('click', () => {
   const input = document.getElementById('new-invite-link');
-  input.select(); document.execCommand('copy'); alert('Скопировано');
+  input.select(); document.execCommand('copy');
 });
 
 window.toggleInvite = async (id) => { await apiCall('PATCH', `/admin/invites/${id}/toggle`); loadInvites(); };
 window.deleteInvite = async (id) => { if(confirm('Удалить?')) { await apiCall('DELETE', `/admin/invites/${id}`); loadInvites(); } };
 
-// ─── Блокировка / разблокировка ─────────────────────────────────────────────
 window.toggleBlockUser = async (id, isBlocked) => {
   const action = isBlocked ? 'разблокировать' : 'заблокировать';
   if (!confirm(`Вы уверены, что хотите ${action} этого пользователя?`)) return;
   try {
     const res = await apiCall('PATCH', `/admin/users/${id}/block`);
-    alert(res.is_blocked ? '🔒 Заблокирован' : '✅ Разблокирован');
     loadUsers();
   } catch (err) { alert('Ошибка: ' + err.message); }
 };
 
-// ─── Полное удаление ─────────────────────────────────────────────────────────
 window.deleteUser = async (id, nickname) => {
   if (!confirm(`⚠️ Удалить "${nickname || id}" НАВСЕГДА?\nДействие необратимо.`)) return;
-  if (!confirm('Подтвержите ещё раз. Все данные будут удалены.')) return;
   try {
     await apiCall('DELETE', `/admin/users/${id}`);
-    alert('✅ Пользователь удалён');
     ui.userDetailsModal.classList.remove('open');
     loadUsers();
   } catch (err) { alert('Ошибка: ' + err.message); }
 };
 
-// ─── Обновлённый openUserModal ────────────────────────────────────────────────
 window.openUserModal = async (id) => {
   currentUserId = id;
   const user = usersData.find(u => u.id === id || u.id === parseInt(id));
   if (!user) return;
 
-  document.getElementById('ud-id').textContent      = `#${user.id}`;
+  document.getElementById('ud-id').textContent      = user.id.slice(0,12) + '...';
   document.getElementById('ud-ip').textContent      = user.ip || '—';
   document.getElementById('ud-device').textContent  = user.device_type || '—';
   document.getElementById('ud-browser').textContent = user.browser || '—';
   document.getElementById('ud-country').textContent = user.country || '—';
   document.getElementById('ud-note').value          = user.admin_note || '';
 
-  // Динамическая кнопка блокировки
   const blockBtn = document.getElementById('ud-block-btn');
   if (blockBtn) {
     blockBtn.textContent       = user.is_blocked ? '✅ Разблокировать' : '🔒 Заблокировать';
-    blockBtn.style.background  = user.is_blocked ? '#34c759' : '#ff9500';
+    blockBtn.style.background  = user.is_blocked ? 'var(--success)' : 'var(--warning)';
     blockBtn.onclick = () => toggleBlockUser(id, user.is_blocked);
   }
 
   const deleteBtn = document.getElementById('ud-delete-btn');
-  if (deleteBtn) {
-    deleteBtn.onclick = () => deleteUser(id, user.nickname);
-  }
+  if (deleteBtn) { deleteBtn.onclick = () => deleteUser(id, user.nickname); }
 
   const sess = await apiCall('GET', `/admin/users/${id}/sessions`);
   const sl = document.getElementById('ud-sessions-list');
   sl.innerHTML = sess.length
     ? sess.map(s => `<li>
-        ${new Date(s.started_at).toLocaleString()} —
-        ${s.duration_seconds ? Math.round(s.duration_seconds / 60) + ' мин' : 'активна'}
+        <span style="color:var(--text-muted)">${new Date(s.started_at).toLocaleString()}</span> —
+        <strong>${s.duration_seconds ? Math.round(s.duration_seconds / 60) + ' мин' : 'активна'}</strong>
         [${s.messages_count} сообщ.]
-        ${s.is_active ? '<span style="color:#34c759">● онлайн</span>' : ''}
+        ${s.is_active ? '<span class="badge badge-online">online</span>' : ''}
       </li>`).join('')
     : '<li style="color:var(--text-muted)">Нет сессий</li>';
 
@@ -343,7 +400,6 @@ window.openUserModal = async (id) => {
 document.getElementById('ud-save-note-btn').addEventListener('click', async () => {
   if(!currentUserId) return;
   await apiCall('PATCH', `/admin/users/${currentUserId}/note`, { note: document.getElementById('ud-note').value });
-  alert('Сохранено');
   loadUsers();
 });
 
@@ -352,130 +408,93 @@ document.getElementById('ud-ban-ip').addEventListener('click', async (e) => {
   const ip = document.getElementById('ud-ip').textContent;
   if(ip && ip !== '—' && confirm(`Заблокировать IP ${ip}?`)) {
     await apiCall('POST', '/admin/blacklist', { ip, reason: 'Manual block from user details' });
-    alert('IP заблокирован');
     loadBlacklist();
   }
 });
 
-document.getElementById('ud-temp-ban').addEventListener('click', async () => {
-  if (!currentUserId) return;
-  const reason = prompt('Причина временного бана:');
-  if (reason === null) return;
-  await apiCall('POST', `/admin/users/${currentUserId}/temp-ban`, { reason });
-  alert('Пользователь временно заблокирован');
-  loadUsers();
-});
-
-document.getElementById('ud-unban').addEventListener('click', async () => {
-  if (!currentUserId) return;
-  const label = prompt('Подпись для нового инвайта (необязательно):') || 'Повторный доступ';
-  const res = await apiCall('POST', `/admin/users/${currentUserId}/unban`, { label });
-  if (res.newLink) {
-    prompt('Новая инвайт-ссылка (скопируй):', res.newLink);
-  }
-  alert('Пользователь разбанен, новый инвайт создан');
-  loadUsers();
-});
-
-// EXPORT
-document.getElementById('export-users-btn').addEventListener('click', async () => {
-  try {
-    const { downloadToken } = await apiCall('POST', '/admin/generate-download-token');
-    window.open(`${API_BASE}/admin/users/export?dt=${downloadToken}`, '_blank');
-  } catch (e) {
-    alert('Ошибка при получении токена для экспорта');
-  }
-});
-
-// BLACKLIST ACTIONS
-document.getElementById('add-blacklist-btn').addEventListener('click', async () => {
-  const ip = document.getElementById('blacklist-ip').value;
-  const reason = document.getElementById('blacklist-reason').value;
-  await apiCall('POST', '/admin/blacklist', { ip, reason });
-  document.getElementById('blacklist-ip').value = '';
-  document.getElementById('blacklist-reason').value = '';
-  loadBlacklist();
-});
-window.delBlacklist = async (id) => { if(confirm('Удалить?')) { await apiCall('DELETE', `/admin/blacklist/${id}`); loadBlacklist(); } };
-
-// ── EVOLUTION TAB ──────────────────────────────────────────────
+// --- EVOLUTION ---
 async function loadEvolution() {
-  // Technique stats
   try {
     const stats = await apiCall('GET', '/admin/evolution/technique-stats');
     const tb = document.querySelector('#technique-stats-table tbody');
     tb.innerHTML = '';
     (stats || []).forEach(t => {
       tb.innerHTML += `<tr>
-        <td>${t.technique_name}</td>
+        <td><strong>${t.technique_name}</strong></td>
         <td>${t.total_uses}</td>
-        <td style="color:#34c759">${t.positive_outcomes}</td>
-        <td style="color:#ff6b6b">${t.negative_outcomes}</td>
-        <td>${t.success_rate_pct ?? '—'}%</td>
+        <td style="color:var(--success)">${t.positive_outcomes}</td>
+        <td style="color:var(--danger)">${t.negative_outcomes}</td>
+        <td><strong style="color:var(--accent-primary)">${t.success_rate_pct ?? '—'}%</strong></td>
         <td>${t.avg_turn_used ? parseFloat(t.avg_turn_used).toFixed(1) : '—'}</td>
       </tr>`;
     });
-    if (!stats?.length) tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888">Нет данных</td></tr>';
-  } catch (e) { console.warn('technique-stats', e); }
+  } catch (e) { console.warn(e); }
 
-  // Suggestions
   try {
     const suggestions = await apiCall('GET', '/admin/evolution/suggestions');
     const container = document.getElementById('suggestions-list');
     container.innerHTML = '';
     (suggestions || []).forEach(s => {
       const card = document.createElement('div');
-      card.style.cssText = 'background:var(--bg-secondary,#1a2740);border-radius:8px;padding:16px;border:1px solid #2a3a5a;';
+      card.className = 'panel';
+      card.style.padding = '1.5rem';
       card.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-          <strong style="color:#5ba8e0">${s.suggestion_type || ''}</strong>
-          <span style="font-size:11px;padding:2px 8px;border-radius:12px;background:#2a3a5a">${s.status}</span>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+          <h4 style="margin:0; color:var(--accent-primary)">${s.suggestion_type || 'Suggestion'}</h4>
+          <span class="badge badge-online">${s.status}</span>
         </div>
-        <p style="margin:4px 0;font-size:13px;color:#aaa"><strong>Обоснование:</strong> ${s.reasoning}</p>
-        <p style="margin:4px 0;font-size:13px;color:#aaa"><strong>Ожидаемый эффект:</strong> ${s.expected_benefit}</p>
-        ${s.potential_risks ? `<p style="margin:4px 0;font-size:12px;color:#888"><strong>Риски:</strong> ${s.potential_risks}</p>` : ''}
-        ${s.status === 'pending' ? `<div style="margin-top:10px;display:flex;gap:8px;">
-          <button onclick="updateSuggestion('${s.id}','approved')" style="background:#34c759">✅ Применить</button>
-          <button onclick="updateSuggestion('${s.id}','rejected')" style="background:#ff6b6b">❌ Отклонить</button>
-          <button onclick="updateSuggestion('${s.id}','testing')" style="background:#ff9500">🧪 Тестировать</button>
+        <p style="margin:0.5rem 0;font-size:0.9rem;"><strong>💡 Idea:</strong> ${s.proposed_text || s.reasoning}</p>
+        <p style="margin:0.5rem 0;font-size:0.8rem;color:var(--text-dim)"><strong>🎯 Benefit:</strong> ${s.expected_benefit}</p>
+        ${s.status === 'pending' ? `<div style="margin-top:1.5rem;display:flex;gap:0.75rem;">
+          <button onclick="updateSuggestion('${s.id}','approved')" style="background:var(--success)">✅ Approve</button>
+          <button onclick="updateSuggestion('${s.id}','rejected')" style="background:rgba(239, 68, 68, 0.1); color:var(--danger)">❌ Reject</button>
         </div>` : ''}
       `;
       container.appendChild(card);
     });
-    if (!suggestions?.length) container.innerHTML = '<p style="color:#888;text-align:center">Нет предложений</p>';
-  } catch (e) { console.warn('suggestions', e); }
-
+  } catch (e) { console.warn(e); }
+  
   // Crisis events
   try {
     const crises = await apiCall('GET', '/admin/evolution/crisis-events');
     const tb = document.querySelector('#crisis-table tbody');
     tb.innerHTML = '';
     (crises || []).forEach(c => {
-      const reviewed = c.reviewed_at;
       tb.innerHTML += `<tr>
         <td>${new Date(c.created_at).toLocaleString()}</td>
-        <td>${c.nickname || c.user_id?.slice(0,8) || '—'}</td>
-        <td style="max-width:300px;white-space:normal">${c.trigger_phrase || '—'}</td>
-        <td>${reviewed ? '<span style="color:#34c759">Проверено</span>' : '<span style="color:#ff9500">Ожидает</span>'}</td>
-        <td>${!reviewed ? `<button onclick="reviewCrisis('${c.id}')" class="secondary">Отметить</button>` : ''}</td>
+        <td><strong>${c.nickname || '—'}</strong></td>
+        <td style="color:var(--danger)">${c.trigger_phrase || '—'}</td>
+        <td><span class="badge ${c.reviewed_at ? 'badge-online' : 'badge-blocked'}">${c.reviewed_at ? 'Reviewed' : 'Action Required'}</span></td>
+        <td>${!c.reviewed_at ? `<button onclick="reviewCrisis('${c.id}')" class="secondary">Review</button>` : '—'}</td>
       </tr>`;
     });
-    if (!crises?.length) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#888">Нет событий</td></tr>';
-  } catch (e) { console.warn('crisis-events', e); }
+  } catch (e) { console.warn(e); }
 }
 
-window.updateSuggestion = async (id, status) => {
-  await apiCall('PATCH', `/admin/evolution/suggestions/${id}`, { status });
-  loadEvolution();
-};
+window.updateSuggestion = async (id, status) => { await apiCall('PATCH', `/admin/evolution/suggestions/${id}`, { status }); loadEvolution(); };
+window.reviewCrisis = async (id) => { await apiCall('PATCH', `/admin/evolution/crisis-events/${id}/review`); loadEvolution(); };
+window.delBlacklist = async (id) => { if(confirm('Удалить?')) { await apiCall('DELETE', `/admin/blacklist/${id}`); loadBlacklist(); } };
 
-window.reviewCrisis = async (id) => {
-  await apiCall('PATCH', `/admin/evolution/crisis-events/${id}/review`);
-  loadEvolution();
-};
+async function checkCrisis() {
+  try {
+    const crises = await apiCall('GET', '/admin/evolution/crisis-events');
+    const pending = crises.filter(c => !c.reviewed_at).length;
+    const badge = document.getElementById('crisis-badge');
+    if (pending > 0) {
+      badge.textContent = pending;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch (e) {}
+}
 
 setInterval(() => {
-  if (ui.dashboardScreen.style.display === 'block') loadDashboard();
+  if (ui.dashboardScreen.style.display === 'block') {
+    loadDashboard();
+    checkCrisis();
+  }
 }, 30000);
 
 checkAuth();
+checkCrisis();

@@ -44,6 +44,23 @@ router.get('/analytics/hourly', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Hourly Error' }); }
 });
 
+router.get('/analytics/daily', async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT 
+        DATE(started_at) as date,
+        COUNT(*) as sessions_count,
+        COUNT(DISTINCT user_id) as dau,
+        SUM(messages_count) as total_messages
+      FROM sessions
+      WHERE started_at > NOW() - INTERVAL '30 days'
+      GROUP BY date
+      ORDER BY date DESC
+    `);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: 'Daily Analytics Error' }); }
+});
+
 router.get('/analytics/retention', async (req, res) => {
   try {
     const result = await db.query(`
