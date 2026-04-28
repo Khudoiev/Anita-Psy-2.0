@@ -2,10 +2,8 @@
 # ANITA PSY — DEPLOY MANAGEMENT
 # ═══════════════════════════════════════════════════════════════════════════════
 #
-# ЛОКАЛЬНЫЙ STAGING (твой ноутбук, Docker):
-#   make local            запустить   → http://localhost:8080 / :8082
-#   make local-stop       остановить
-#   make local-logs       логи
+# 
+
 #
 # GIT WORKFLOW (отправка кода):
 #   make push-staging     develop → staging → push → автодеплой на сервер
@@ -26,25 +24,11 @@
 #   make health           /api/health обоих окружений
 # ═══════════════════════════════════════════════════════════════════════════════
 
-.PHONY: local local-stop local-logs \
-        push-staging push-prod \
+.PHONY: push-staging push-prod \
         staging staging-stop staging-logs \
         prod prod-stop prod-logs \
         status health
 
-# ─── ЛОКАЛЬНЫЙ STAGING ────────────────────────────────────────────────────────
-
-local:
-	@echo "🧪 Запускаем локальный staging..."
-	./scripts/deploy-staging.sh
-
-local-stop:
-	@echo "🛑 Останавливаем локальный staging..."
-	docker-compose -f infra/docker-compose.staging.yml down
-	@echo "✅ Остановлен"
-
-local-logs:
-	docker-compose -f infra/docker-compose.staging.yml logs -f --tail=100
 
 # ─── GIT WORKFLOW ─────────────────────────────────────────────────────────────
 
