@@ -12,7 +12,9 @@ router.use(requireAuth);
 router.get('/', async (req, res) => {
   try {
     const result = await db.query(`
-      SELECT id, title, created_at, updated_at, messages_count, effectiveness_score
+      SELECT id, title, created_at, updated_at, 
+             messages_count as message_count, 
+             effectiveness_score
       FROM conversations
       WHERE user_id=$1 AND is_archived=false
       ORDER BY updated_at DESC LIMIT 50
@@ -56,7 +58,12 @@ router.get('/:id', async (req, res) => {
     const decryptedMsgs = await Promise.all(
       msgs.rows.map(async m => ({ ...m, content: await decryptText(m.content) }))
     );
-    res.json({ ...conv.rows[0], messages: decryptedMsgs });
+    
+    // Возвращаем в формате, который ожидает StorageManager (chat: ..., messages: ...)
+    res.json({ 
+      chat: { ...conv.rows[0], message_count: conv.rows[0].messages_count }, 
+      messages: decryptedMsgs 
+    });
   } catch (err) {
     console.error('[conversations GET /:id]', err);
     res.status(500).json({ error: 'Ошибка сервера' });
@@ -259,6 +266,54 @@ router.post('/:id/insights', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[POST /:id/insights]', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// MEMORY (moved from chats.js)
+// ══════════════════════════════════════════════════════════════
+
+// GET /api/conversations/memory
+router.get('/memory', async (req, res) => {
+  try {
+    const { getProfile } = require('../services/memoryService');
+    const profile = await getProfile(req.user.userId);
+    // Для совместимости с MemoryManager (app.js)
+    res.json({
+      facts: [], // Факты теперь отдельно, возвращаем пустой массив для кэша
+      themes: profile.themes || [],
+      techniques: profile.techniques || [],
+      name_hint: profile.name,
+      mood_trajectory: profile.mood_history?.at(-1)?.score || null
+    });
+  } catch (err) {
+    console.error('[GET /memory]', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// POST /api/conversations/memory
+router.post('/memory', async (req, res) => {
+  const { facts, themes, techniques, name_hint, mood_trajectory } = req.body;
+  try {
+    const { updateProfile, saveFacts } = require('../services/memoryService');
+    
+    // Сохраняем структурированные данные в профиль
+    await updateProfile(req.user.userId, {
+      themes,
+      techniques,
+      name: name_hint
+    });
+
+    // Если есть новые атомарные факты — сохраняем их в отдельные строки
+    if (facts && facts.length) {
+      await saveFacts(req.user.userId, null, { facts });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[POST /memory]', err);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

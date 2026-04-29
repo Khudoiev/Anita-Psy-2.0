@@ -27,7 +27,6 @@ const userSessionRoutes   = require('./routes/userSessions');
 const invitesRoutes       = require('./routes/invites');
 const sessionsRoutes      = require('./routes/sessions');
 const chatRoutes          = require('./routes/chat');
-const chatsRoutes         = require('./routes/chats');
 const resetReqRoutes      = require('./routes/resetRequests');
 const conversationsRoutes = require('./routes/conversations');
 const profileRoutes       = require('./routes/profile');
@@ -79,7 +78,6 @@ app.use('/api', (req, res, next) => {
 
 // Routes
 app.use('/api',               authRoutes);
-app.use('/api',               chatsRoutes);
 app.use('/api/sessions',      userSessionRoutes);
 app.use('/api/conversations', conversationsRoutes);
 app.use('/api/admin/invites', invitesRoutes);

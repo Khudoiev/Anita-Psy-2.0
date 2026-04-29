@@ -74,7 +74,7 @@ class StorageManager {
   // ── Список чатов ──────────────────────────────
 
   async fetchChats() {
-    const data = await this.apiFetch('GET', '/chats');
+    const data = await this.apiFetch('GET', '/conversations');
     this._chatsCache = data || [];
     return this._chatsCache;
   }
@@ -82,7 +82,7 @@ class StorageManager {
   getChatsCache()   { return this._chatsCache; }
 
   async createChat(title) {
-    const chat = await this.apiFetch('POST', '/chats', { title: title || 'Новый разговор' });
+    const chat = await this.apiFetch('POST', '/conversations', { title: title || 'Новый разговор' });
     if (chat) {
       chat.messages = [];
       this._chatsCache.unshift(chat);
@@ -92,7 +92,7 @@ class StorageManager {
   }
 
   async deleteChat(id) {
-    await this.apiFetch('DELETE', `/chats/${id}`);
+    await this.apiFetch('DELETE', `/conversations/${id}`);
     this._chatsCache = this._chatsCache.filter(c => c.id !== id);
     delete this._messagesCache[id];
   }
@@ -100,7 +100,7 @@ class StorageManager {
   // ── Сообщения ────────────────────────────────
 
   async fetchMessages(chatId) {
-    const data = await this.apiFetch('GET', `/chats/${chatId}`);
+    const data = await this.apiFetch('GET', `/conversations/${chatId}`);
     if (!data) return [];
     this._messagesCache[chatId] = data.messages || [];
     // Обновляем кэш чатов
@@ -112,7 +112,7 @@ class StorageManager {
   getMessagesCache(chatId) { return this._messagesCache[chatId] || []; }
 
   async saveMessage(chatId, role, content) {
-    const msg = await this.apiFetch('POST', `/chats/${chatId}/messages`, { role, content });
+    const msg = await this.apiFetch('POST', `/conversations/${chatId}/messages`, { role, content });
     if (msg) {
       if (!this._messagesCache[chatId]) this._messagesCache[chatId] = [];
       this._messagesCache[chatId].push({ role, content, created_at: msg.created_at });
@@ -133,7 +133,7 @@ class StorageManager {
   // ── Память Anita ──────────────────────────────
 
   async fetchMemory() {
-    const data = await this.apiFetch('GET', '/memory');
+    const data = await this.apiFetch('GET', '/conversations/memory');
     this._memoryCache = data || { facts: [], themes: [], techniques: [], name_hint: null };
     // Синхронизируем name_hint с профилем
     if (this._memoryCache.name_hint) {
@@ -150,7 +150,7 @@ class StorageManager {
   async saveMemory(mem) {
     this._memoryCache = mem;
     // Fire-and-forget — не блокируем UI
-    this.apiFetch('POST', '/memory', mem).catch(e => console.warn('[Memory save]', e));
+    this.apiFetch('POST', '/conversations/memory', mem).catch(e => console.warn('[Memory save]', e));
   }
 }
 
