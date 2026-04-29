@@ -365,7 +365,7 @@ class AnitaApp {
   // ══════════════════════════════════════════
   async init() {
     if (!this.storage.getToken()) {
-      window.location.href = '/auth.html';
+      window.location.href = '/auth.html' + window.location.search;
       return;
     }
 
@@ -430,6 +430,12 @@ class AnitaApp {
           headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId: this.sessionId })
         });
+        if (this.currentChatId) {
+          fetch(`/api/conversations/${this.currentChatId}/end`, {
+            method: 'POST', keepalive: true,
+            headers: { Authorization: `Bearer ${jwt}`, 'Content-Type': 'application/json' }
+          });
+        }
       });
     })
     .catch(e => console.warn('[Session start]', e));
@@ -474,6 +480,91 @@ class AnitaApp {
         if (e.target === this.dom.settingsModal) this.closeSettings();
       });
     }
+
+    bind('#end-session-btn', 'click', () => this.endSession());
+    bind('#insights-skip-btn', 'click', () => { this.$('#insights-modal').classList.remove('visible'); });
+    bind('#insights-save-btn', 'click', () => this.saveInsights());
+  }
+
+  // ══════════════════════════════════════════
+  // INSIGHTS & END SESSION
+  // ══════════════════════════════════════════
+  endSession() {
+    if (!this.currentChatId) return;
+    const btn = this.$('#end-session-btn');
+    if (btn) btn.textContent = 'Анализирую...';
+    
+    fetch(`/api/conversations/${this.currentChatId}/end`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.storage.getToken()}` }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (btn) btn.textContent = 'Завершить сеанс';
+      if (data.insights && data.insights.length > 0) {
+        this.showInsightsModal(data.insights);
+      } else {
+        // Just show a gentle message
+        this.appendBubble('anita', 'Спасибо за разговор. Хорошего отдыха.');
+      }
+    })
+    .catch(e => {
+      console.error(e);
+      if (btn) btn.textContent = 'Завершить сеанс';
+    });
+  }
+
+  showInsightsModal(insights) {
+    const list = this.$('#insights-list');
+    if (!list) return;
+    list.innerHTML = '';
+    insights.forEach((ins, i) => {
+       list.innerHTML += `
+         <div class="insight-card" data-index="${i}" style="background:var(--bg-secondary); padding:12px; border-radius:8px; border: 1px solid var(--border);">
+           <div style="font-weight:bold; margin-bottom:5px; color:var(--text-primary);">${this.esc(ins.title)}</div>
+           <div style="font-size:14px; opacity:0.8; margin-bottom:12px; color:var(--text-secondary);">${this.esc(ins.description)}</div>
+           <div style="display:flex; gap:15px; font-size:13px;">
+             <label style="cursor:pointer; display:flex; align-items:center; gap:5px;">
+               <input type="radio" name="insight_${i}" value="yes" checked> ✓ Согласен, сохранить
+             </label>
+             <label style="cursor:pointer; display:flex; align-items:center; gap:5px;">
+               <input type="radio" name="insight_${i}" value="no"> ✗ Не про меня
+             </label>
+           </div>
+         </div>
+       `;
+    });
+    this.currentInsights = insights;
+    this.$('#insights-modal').classList.add('visible');
+  }
+
+  saveInsights() {
+    if (!this.currentInsights) return;
+    const approved = [];
+    const cards = this.$$('.insight-card');
+    cards.forEach(card => {
+       const i = card.getAttribute('data-index');
+       const radio = card.querySelector(`input[name="insight_${i}"]:checked`);
+       if (radio && radio.value === 'yes') {
+          approved.push(this.currentInsights[i]);
+       }
+    });
+
+    const btn = this.$('#insights-save-btn');
+    if (btn) btn.textContent = 'Сохраняю...';
+
+    fetch(`/api/conversations/${this.currentChatId}/insights`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.storage.getToken()}` },
+      body: JSON.stringify({ approved })
+    }).then(() => {
+      this.$('#insights-modal').classList.remove('visible');
+      if (btn) btn.textContent = 'Сохранить выбранное';
+      this.appendBubble('anita', 'Я сохранила эти наблюдения. Можем вернуться к ним в следующий раз.');
+    }).catch(() => {
+      if (btn) btn.textContent = 'Сохранить выбранное';
+      this.$('#insights-modal').classList.remove('visible');
+    });
   }
 
   // ══════════════════════════════════════════

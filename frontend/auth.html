@@ -229,7 +229,7 @@
 
     // ── Определяем режим по URL ──────────────────────────────
     const urlParams = new URLSearchParams(window.location.search);
-    const inviteToken = urlParams.get('invite');
+    const inviteToken = urlParams.get('token') || urlParams.get('invite');
     const resetToken  = urlParams.get('reset_token');
 
     // Если пришли с invite — сначала создаём анонимную учётку, потом предлагаем зарегистрироваться

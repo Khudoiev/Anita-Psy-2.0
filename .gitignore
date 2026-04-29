@@ -5,6 +5,7 @@
 .env.staging.server
 *.env.local
 .env.production
+infra/remote_env
 
 # Docker override — только для локальной разработки
 docker-compose.override.yml

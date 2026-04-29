@@ -51,4 +51,56 @@ async function touchMemoryFacts(userId, factsUsed) {
   `, [userId, factsUsed]);
 }
 
-module.exports = { getUserMemoryContext, saveFacts, touchMemoryFacts };
+const defaultProfile = {
+  name: null,
+  core_issues: [],
+  triggers: [],
+  progress: "",
+  personality_notes: "",
+  preferred_techniques: [],
+  mood_history: [],
+  insights_history: [],
+  is_onboarded: false
+};
+
+async function getProfile(userId) {
+  const result = await db.query('SELECT profile FROM user_memory WHERE user_id = $1 AND profile IS NOT NULL LIMIT 1', [userId]);
+  if (!result.rows.length || !result.rows[0].profile) {
+    return { ...defaultProfile };
+  }
+  return result.rows[0].profile;
+}
+
+async function updateProfile(userId, updates) {
+  const currentProfile = await getProfile(userId);
+  
+  const newProfile = { ...currentProfile };
+  for (const key of Object.keys(updates)) {
+    if (['core_issues', 'triggers', 'preferred_techniques'].includes(key)) {
+      const currentArr = Array.isArray(newProfile[key]) ? newProfile[key] : [];
+      const updateArr = Array.isArray(updates[key]) ? updates[key] : [updates[key]];
+      const newItems = updateArr.filter(item => !currentArr.includes(item));
+      newProfile[key] = [...currentArr, ...newItems];
+    } else if (['mood_history', 'insights_history'].includes(key)) {
+      const currentArr = Array.isArray(newProfile[key]) ? newProfile[key] : [];
+      const updateArr = Array.isArray(updates[key]) ? updates[key] : [updates[key]];
+      newProfile[key] = [...currentArr, ...updateArr];
+    } else {
+      newProfile[key] = updates[key];
+    }
+  }
+
+  const updateResult = await db.query('UPDATE user_memory SET profile = $1 WHERE user_id = $2', [newProfile, userId]);
+  
+  if (updateResult.rowCount === 0) {
+    await db.query(
+      `INSERT INTO user_memory (user_id, fact, category, importance, profile) 
+       VALUES ($1, 'User profile initialized', 'personal', 'low', $2)`,
+      [userId, newProfile]
+    );
+  }
+  
+  return newProfile;
+}
+
+module.exports = { getUserMemoryContext, saveFacts, touchMemoryFacts, getProfile, updateProfile };

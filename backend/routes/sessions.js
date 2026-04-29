@@ -345,7 +345,7 @@ router.post('/users/:id/unban', async (req, res) => {
     await logAdminAction(req.user.adminId, 'unban_user', 'user', req.params.id, { newInviteId });
 
     // Обратите внимание: URL фронтенда берется из окружения или пустой строки
-    const newLink = `${process.env.FRONTEND_URL || req.headers.origin || ''}/?invite=${newToken}`;
+    const newLink = `${process.env.FRONTEND_URL || req.headers.origin || ''}/auth.html?invite=${newToken}`;
     res.json({ success: true, newLink, inviteId: newInviteId });
   } catch (err) {
     console.error(err);

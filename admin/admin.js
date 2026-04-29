@@ -76,6 +76,26 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 });
 
 // --- TABS ---
+function switchTab(tabId) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  ui.tabContents.forEach(t => t.classList.remove('active'));
+  const btn = document.querySelector(`[data-tab="${tabId}"]`);
+  if (btn) btn.classList.add('active');
+  const tab = document.getElementById(tabId);
+  if (tab) tab.classList.add('active');
+  if (tabId === 'tab-analytics') loadAnalytics();
+  if (tabId === 'tab-geo') loadGeo();
+  if (tabId === 'tab-security') loadBlacklist();
+  if (tabId === 'tab-logs') loadLogs();
+  if (tabId === 'tab-evolution') loadEvolution();
+}
+
+document.getElementById('stat-online').closest('.stat-card').addEventListener('click', () => switchTab('tab-main'));
+document.getElementById('stat-total').closest('.stat-card').addEventListener('click', () => switchTab('tab-main'));
+document.getElementById('stat-avg').closest('.stat-card').addEventListener('click', () => switchTab('tab-analytics'));
+document.getElementById('stat-hours').closest('.stat-card').addEventListener('click', () => switchTab('tab-analytics'));
+document.getElementById('stat-tokens').closest('.stat-card').addEventListener('click', () => switchTab('tab-analytics'));
+
 ui.tabsNav.addEventListener('click', e => {
   if (e.target.classList.contains('nav-tab')) {
     document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
@@ -120,7 +140,7 @@ async function loadInvites() {
   ui.invitesTable.innerHTML = '';
   invites.forEach(inv => {
     const tr = document.createElement('tr');
-    const link = `${window.location.origin}/?invite=${inv.token}`;
+    const link = inv.invite_url || `/register?token=${inv.token}`;
     tr.innerHTML = `
       <td>${inv.label || '—'}</td>
       <td><input type="text" value="${link}" readonly style="background:transparent; border:none; outline:none; width:200px; color:var(--accent-primary)"></td>
@@ -330,7 +350,7 @@ document.getElementById('save-invite-btn').addEventListener('click', async () =>
   const maxUses = document.getElementById('invite-max').value;
   const exp = document.getElementById('invite-exp').value;
   const res = await apiCall('POST', '/admin/invites', { label, maxUses: parseInt(maxUses), expiresAt: exp || null });
-  document.getElementById('new-invite-link').value = `${window.location.origin}/?invite=${res.token}`;
+  document.getElementById('new-invite-link').value = `${window.location.origin}/register?token=${res.token}`;
   document.getElementById('new-invite-link-container').style.display = 'block';
   loadInvites();
 });

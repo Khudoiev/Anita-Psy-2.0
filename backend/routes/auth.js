@@ -61,7 +61,7 @@ router.post('/auth/join', async (req, res) => {
       `SELECT * FROM invites
        WHERE token = $1 AND is_active = true
          AND uses_count < max_uses
-         AND (expires_at IS NULL OR expires_at > NOW())
+         AND (expires_at IS NULL OR expires_at > NOW() AT TIME ZONE 'UTC')
        FOR UPDATE`,
       [token]
     );
@@ -101,6 +101,7 @@ router.post('/auth/join', async (req, res) => {
 router.post('/auth/register', requireAuth, async (req, res) => {
   if (req.user.role !== 'user') return res.status(403).json({ error: 'Только для пользователей' });
 
+  const token = req.query.token || req.body.token; // Читаем token из query (согласно задаче)
   const { username, password, secretQuestion, secretAnswer } = req.body;
 
   // Валидация

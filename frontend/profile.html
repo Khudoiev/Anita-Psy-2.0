@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Мой Дневник · Anita</title>
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="stylesheet" href="index.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background: #0e1a2e; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 20px; }
+    .container { max-width: 800px; margin: 0 auto; padding-bottom: 50px; }
+    h1 { font-size: 26px; font-weight: 600; margin-bottom: 30px; color: #f8fafc; letter-spacing: -0.5px; }
+    .section { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 24px; margin-bottom: 25px; backdrop-filter: blur(10px); }
+    .section-title { font-size: 18px; margin-bottom: 20px; color: #cbd5e1; font-weight: 500; }
+    .chips-container { display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip { background: rgba(147, 197, 253, 0.08); color: #93c5fd; border: 1px solid rgba(147, 197, 253, 0.15); padding: 8px 14px; border-radius: 20px; font-size: 14px; }
+    .insight-item { border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 20px; margin-bottom: 20px; }
+    .insight-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .insight-date { font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+    .insight-title { font-weight: 600; color: #f1f5f9; margin-bottom: 8px; font-size: 16px; }
+    .insight-desc { font-size: 15px; color: #94a3b8; line-height: 1.6; }
+    .progress-text { font-size: 15px; color: #cbd5e1; line-height: 1.6; }
+    .back-nav { display: inline-flex; align-items: center; gap: 8px; color: #94a3b8; text-decoration: none; margin-bottom: 30px; font-size: 15px; transition: 0.2s; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+    .back-nav:hover { color: #f8fafc; background: rgba(255,255,255,0.1); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-nav">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Вернуться к диалогу
+    </a>
+    <h1>Мой Дневник</h1>
+
+    <div class="section" id="mood-section" style="display:none;">
+      <div class="section-title">Состояние</div>
+      <canvas id="moodChart" height="80"></canvas>
+    </div>
+
+    <div class="section" id="patterns-section" style="display:none;">
+      <div class="section-title">Мои паттерны и триггеры</div>
+      <div class="chips-container" id="patterns-chips"></div>
+    </div>
+
+    <div class="section" id="progress-section" style="display:none;">
+      <div class="section-title">Прогресс</div>
+      <div class="progress-text" id="progress-text"></div>
+    </div>
+
+    <div class="section" id="insights-section" style="display:none;">
+      <div class="section-title">Дневник инсайтов</div>
+      <div id="insights-list"></div>
+    </div>
+  </div>
+
+  <script>
+    async function loadProfile() {
+      const token = localStorage.getItem('anita_jwt');
+      if (!token) { window.location.href = '/auth.html'; return; }
+
+      try {
+        const res = await fetch('/api/profile', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to load');
+        const profile = await res.json();
+        renderProfile(profile);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderProfile(profile) {
+      if (profile.mood_history && profile.mood_history.length > 0) {
+        document.getElementById('mood-section').style.display = 'block';
+        const ctx = document.getElementById('moodChart').getContext('2d');
+        const labels = profile.mood_history.map(m => {
+          if (!m.date) return '';
+          const d = new Date(m.date);
+          return `${d.getDate()}.${d.getMonth()+1}`;
+        });
+        const data = profile.mood_history.map(m => m.score);
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Настроение',
+              data,
+              borderColor: '#93c5fd',
+              backgroundColor: 'rgba(147, 197, 253, 0.1)',
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+              pointBackgroundColor: '#93c5fd'
+            }]
+          },
+          options: {
+            scales: { 
+              y: { min: 1, max: 10, ticks: { color: '#64748b' }, grid: { color: 'rgba(255,255,255,0.05)' } }, 
+              x: { ticks: { color: '#64748b' }, grid: { display: false } } 
+            },
+            plugins: { legend: { display: false } },
+            maintainAspectRatio: true
+          }
+        });
+      }
+
+      const patterns = [...(profile.core_issues || []), ...(profile.triggers || [])];
+      if (patterns.length > 0) {
+        document.getElementById('patterns-section').style.display = 'block';
+        const container = document.getElementById('patterns-chips');
+        patterns.forEach(p => {
+          const chip = document.createElement('div');
+          chip.className = 'chip';
+          chip.textContent = p;
+          container.appendChild(chip);
+        });
+      }
+
+      if (profile.progress) {
+        document.getElementById('progress-section').style.display = 'block';
+        document.getElementById('progress-text').textContent = profile.progress;
+      }
+
+      if (profile.insights_history && profile.insights_history.length > 0) {
+        document.getElementById('insights-section').style.display = 'block';
+        const container = document.getElementById('insights-list');
+        const insights = [...profile.insights_history].reverse();
+        insights.forEach(ins => {
+          const item = document.createElement('div');
+          item.className = 'insight-item';
+          const dateStr = ins.date ? new Date(ins.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+          item.innerHTML = `
+            ${dateStr ? \`<div class="insight-date">\${dateStr}</div>\` : ''}
+            <div class="insight-title">\${escapeHtml(ins.title || 'Инсайт')}</div>
+            <div class="insight-desc">\${escapeHtml(ins.description || '')}</div>
+          `;
+          container.appendChild(item);
+        });
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>

@@ -18,8 +18,9 @@
     const jwt = localStorage.getItem('anita_jwt');
     if (!jwt || !isTokenValid(jwt)) {
       localStorage.removeItem('anita_jwt');
-      const invite = new URLSearchParams(window.location.search).get('invite');
-      window.location.href = invite ? `/auth.html?invite=${invite}` : '/auth.html';
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token') || params.get('invite');
+      window.location.href = token ? `/auth.html?token=${token}` : '/auth.html';
     }
 
     // Failsafe: Remove splash screen after 6 seconds even if JS fails
@@ -87,7 +88,11 @@
             </div>
             <div class="sidebar-profile-sessions" id="profile-sessions" style="display:none;">0 сессий</div>
           </div>
-          <button class="sidebar-settings-btn" id="settings-btn" aria-label="Настройки">
+          <div class="sidebar-profile-actions" style="display:flex; align-items:center;">
+            <a href="/profile.html" class="sidebar-profile-btn" id="profile-btn" aria-label="Мой Дневник" style="color:var(--text-secondary); margin-right:8px; padding:6px; transition:0.2s; border-radius:6px; background:rgba(255,255,255,0.05);" onmouseover="this.style.color='#f8fafc';this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.color='var(--text-secondary)';this.style.background='rgba(255,255,255,0.05)'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </a>
+            <button class="sidebar-settings-btn" id="settings-btn" aria-label="Настройки">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
@@ -141,6 +146,7 @@
               </span>
             </div>
           </div>
+          <button class="end-session-btn" id="end-session-btn" style="margin-left: auto; padding: 6px 12px; background: rgba(255,100,100,0.2); border: 1px solid rgba(255,100,100,0.4); border-radius: 6px; color: #ffbaba; font-size: 13px; cursor: pointer; transition: 0.2s;">Завершить сеанс</button>
         </header>
 
         <div class="chat-area" id="chat-area"></div>
@@ -182,6 +188,18 @@
       <div class="modal-actions">
         <button class="modal-btn secondary" id="modal-cancel">Отмена</button>
         <button class="modal-btn primary" id="modal-save">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== INSIGHTS MODAL ===== -->
+  <div class="modal-overlay" id="insights-modal">
+    <div class="modal">
+      <div class="modal-title">💡 Анита заметила в этом разговоре</div>
+      <div id="insights-list" style="margin-bottom: 20px; max-height: 300px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;"></div>
+      <div class="modal-actions">
+        <button class="modal-btn secondary" id="insights-skip-btn">Пропустить</button>
+        <button class="modal-btn primary" id="insights-save-btn">Сохранить выбранное</button>
       </div>
     </div>
   </div>

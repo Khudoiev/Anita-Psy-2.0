@@ -154,7 +154,7 @@ router.post('/:id/generate-title', async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'grok-3-mini-fast',
+        model: process.env.GROK_MODEL || 'grok-3-mini-fast',
         messages: [{
           role: 'user',
           content: `Придумай короткое название (3-5 слов, без кавычек) для психологической сессии: "${firstContent.slice(0, 150)}". Только название.`
@@ -172,6 +172,94 @@ router.post('/:id/generate-title', async (req, res) => {
   } catch (err) {
     console.error('[generate-title]', err);
     res.json({ title: 'Новый разговор' });
+  }
+});
+
+// POST /api/conversations/:id/end
+router.post('/:id/end', async (req, res) => {
+  try {
+    const msgs = await db.query(
+      `SELECT role, content FROM messages WHERE conversation_id=$1 ORDER BY created_at ASC`,
+      [req.params.id]
+    );
+    
+    if (msgs.rows.length < 5) {
+      return res.json({ success: true, insights: [] });
+    }
+
+    const decryptedMsgs = await Promise.all(
+      msgs.rows.map(async m => ({ ...m, content: await decryptText(m.content) }))
+    );
+
+    const dialogText = decryptedMsgs.map(m => `${m.role === 'user' ? 'Человек' : 'Anita'}: ${m.content}`).join('\n');
+
+    const prompt = `Проанализируй этот диалог. Выдели 2-3 ключевых инсайта и паттерна.
+Верни ТОЛЬКО JSON формат:
+{ "insights": [{ "title": "string", "description": "string" }] }
+Если значимых инсайтов нет — верни { "insights": [] }`;
+
+    const response = await fetch(GROK_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.GROK_MODEL || 'grok-3-mini-fast',
+        messages: [
+          { role: 'system', content: prompt },
+          { role: 'user', content: 'Вот диалог:\n\n' + dialogText }
+        ],
+        temperature: 0.3,
+        max_tokens: 600,
+      }),
+    });
+
+    if (!response.ok) return res.json({ success: true, insights: [] });
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    let parsed = { insights: [] };
+    try {
+      const cleanJson = content.replace(/```json/g, '').replace(/```/g, '').trim();
+      parsed = JSON.parse(cleanJson);
+    } catch (e) {
+      console.error('[Insights parsing error]', e, content);
+    }
+
+    if (decryptedMsgs.length >= 15 && (!parsed.insights || parsed.insights.length === 0)) {
+      const logger = require('../services/logger');
+      if (logger && logger.warn) {
+        logger.warn({ conversationId: req.params.id }, 'WARNING: long session, no insights generated');
+      } else {
+        console.warn(`WARNING: long session, no insights generated, session_id: ${req.params.id}`);
+      }
+    }
+
+    // Add date to insights before sending
+    const dateStr = new Date().toISOString();
+    const insightsWithDate = (parsed.insights || []).map(i => ({ ...i, date: dateStr }));
+
+    res.json({ success: true, insights: insightsWithDate });
+  } catch (err) {
+    console.error('[POST /:id/end]', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// POST /api/conversations/:id/insights
+router.post('/:id/insights', async (req, res) => {
+  const { approved } = req.body;
+  if (!approved || !Array.isArray(approved)) {
+    return res.status(400).json({ error: 'No approved insights array' });
+  }
+  
+  try {
+    const { updateProfile } = require('../services/memoryService');
+    await updateProfile(req.user.userId, { insights_history: approved });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[POST /:id/insights]', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
 

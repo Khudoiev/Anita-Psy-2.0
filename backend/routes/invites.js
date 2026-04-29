@@ -11,7 +11,12 @@ router.use(requireAdmin);
 router.get('/', async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM invites ORDER BY created_at DESC');
-    res.json(result.rows);
+    const frontendUrl = process.env.FRONTEND_URL || '';
+    const rows = result.rows.map(inv => ({
+      ...inv,
+      invite_url: `${frontendUrl}/register?token=${inv.token}`,
+    }));
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: 'Ошибка сервера' });
   }
@@ -24,10 +29,13 @@ router.post('/', async (req, res) => {
   const exp = expiresAt || null;
 
   try {
-    const result = await db.query(
-      'INSERT INTO invites (token, label, max_uses, expires_at) VALUES ($1, $2, $3, $4) RETURNING *',
-      [token, label, maxUses || 1, exp]
-    );
+    const queryStr = exp 
+      ? 'INSERT INTO invites (token, label, max_uses, expires_at) VALUES ($1, $2, $3, $4) RETURNING *'
+      : `INSERT INTO invites (token, label, max_uses, expires_at) VALUES ($1, $2, $3, NOW() AT TIME ZONE 'UTC' + INTERVAL '7 days') RETURNING *`;
+    const queryParams = exp ? [token, label, maxUses || 1, exp] : [token, label, maxUses || 1];
+    
+    const result = await db.query(queryStr, queryParams);
+    
     await logAdminAction(req.user.adminId, 'create_invite', 'invite', result.rows[0].id, { label, maxUses, exp });
     res.json(result.rows[0]);
   } catch (err) {

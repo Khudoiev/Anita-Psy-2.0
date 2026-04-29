@@ -5,6 +5,7 @@ const logger = require('../services/logger');
 const { requireAuth } = require('../middleware/requireAuth');
 const { buildSystemPrompt, MEMORY_EXTRACT_PROMPT } = require('../prompts/anita');
 const { buildContextWindow } = require('../services/contextManager');
+const { parseProfileBackground } = require('../services/profileParser');
 
 const GROK_API_URL = 'https://api.x.ai/v1/chat/completions';
 const DAILY_LIMIT = parseInt(process.env.DAILY_MESSAGE_LIMIT) || 100;
@@ -54,8 +55,11 @@ router.post('/', requireAuth, async (req, res) => {
   }
 
   try {
+    // Background profile parsing (mood and onboarding)
+    parseProfileBackground(userId, messages).catch(e => console.error(e));
+
     const systemPrompt = await buildSystemPrompt(userId);
-    const contextMessages = buildContextWindow(messages, systemPrompt);
+    const contextMessages = await buildContextWindow(messages, systemPrompt, userId);
 
     const response = await fetch(GROK_API_URL, {
       method: 'POST',
@@ -130,7 +134,10 @@ router.post('/stream', requireAuth, async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
 
-  const contextMessages = buildContextWindow(messages, systemPrompt);
+  // Background profile parsing (mood and onboarding)
+  parseProfileBackground(userId, messages).catch(e => console.error(e));
+
+  const contextMessages = await buildContextWindow(messages, systemPrompt, userId);
 
   try {
     const response = await fetch(GROK_API_URL, {

@@ -30,6 +30,7 @@ const chatRoutes          = require('./routes/chat');
 const chatsRoutes         = require('./routes/chats');
 const resetReqRoutes      = require('./routes/resetRequests');
 const conversationsRoutes = require('./routes/conversations');
+const profileRoutes       = require('./routes/profile');
 const checkBlacklist      = require('./middleware/checkBlacklist');
 const requestLogger       = require('./middleware/requestLogger');
 
@@ -85,6 +86,7 @@ app.use('/api/admin/invites', invitesRoutes);
 app.use('/api/admin/reset-requests', resetReqRoutes);
 app.use('/api/admin',         sessionsRoutes);
 app.use('/api/chat',          chatRoutes);
+app.use('/api/profile',       profileRoutes);
 
 // Static files
 app.use(express.static(path.join(__dirname, '../frontend')));
