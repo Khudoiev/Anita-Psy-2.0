@@ -52,7 +52,7 @@ const USERNAME_RE = /^[a-zA-Z0-9_]{3,30}$/;
 // Создаёт анонимного пользователя (без логина/пароля)
 // ══════════════════════════════════════════════════════════════
 router.post('/auth/join', async (req, res) => {
-  const { token } = req.body;
+  const token = req.body.token || req.query.token || req.query.invite;
   if (!token) return res.status(400).json({ error: 'Токен не передан' });
 
   try {

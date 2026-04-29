@@ -67,6 +67,20 @@ const requireAuth = async (req, res, next) => {
 };
 
 const requireAdmin = async (req, res, next) => {
+  const adminIp = process.env.ADMIN_IP;
+  // Получаем IP клиента (с учетом прокси)
+  const clientIp = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress;
+
+  if (adminIp && clientIp && clientIp.includes(adminIp)) {
+    // Если IP совпадает, создаем виртуальную сессию админа
+    req.user = { 
+      role: 'admin', 
+      adminId: '00000000-0000-0000-0000-000000000000', // Системный ID для логов
+      username: 'IP_ADMIN'
+    };
+    return next();
+  }
+
   await requireAuth(req, res, () => {
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Требуются права администратора' });

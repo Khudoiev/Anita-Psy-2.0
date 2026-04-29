@@ -18,8 +18,13 @@ async function buildContextWindow(messages, systemPrompt, userId) {
   let profileBlock = '';
   if (userId) {
     const profile = await getProfile(userId);
-    if (profile && (profile.is_onboarded || profile.name || (profile.core_issues && profile.core_issues.length > 0))) {
+    const sessionsCountResult = await db.query('SELECT count(*) FROM conversations WHERE user_id = $1', [userId]);
+    const sessionsCount = parseInt(sessionsCountResult.rows[0].count, 10);
+
+    if (profile) {
       profileBlock = `ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ:\n` +
+        `Статус онбординга: ${profile.is_onboarded ? 'ЗАВЕРШЕН' : 'НЕ ЗАВЕРШЕН'}\n` +
+        `Всего сессий: ${sessionsCount}\n` +
         `Имя: ${profile.name || 'не указано'}\n` +
         `Основные проблемы: ${profile.core_issues?.join(', ') || 'нет'}\n` +
         `Триггеры: ${profile.triggers?.join(', ') || 'нет'}\n` +
