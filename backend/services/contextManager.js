@@ -1,4 +1,5 @@
 const { getProfile } = require('./memoryService');
+const db = require('../db');
 
 const MAX_TOKENS = 8000;
 const CHARS_PER_TOKEN = 4;
