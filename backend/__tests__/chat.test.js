@@ -14,6 +14,11 @@ const app = require('../app');
 const { cleanDatabase, createTestUser } = require('./helpers/db');
 const db = require('../db');
 
+// Мок profileParser — не должен вмешиваться в fetch-моки chat-тестов
+jest.mock('../services/profileParser', () => ({
+  parseProfileBackground: jest.fn().mockResolvedValue(undefined),
+}));
+
 // Мок глобального fetch — чтобы не ходить в реальный xAI API
 global.fetch = jest.fn();
 
