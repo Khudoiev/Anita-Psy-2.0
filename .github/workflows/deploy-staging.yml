@@ -1,17 +1,19 @@
 name: Deploy to Staging Server
 
-# Срабатывает при push в staging ветку
-# Локальный staging — запускай вручную: ./scripts/deploy-staging.sh
-# Серверный staging — этот workflow деплоит автоматически через SSH
+# Запускается ТОЛЬКО после успешного завершения Build workflow
+# Это гарантирует что deploy тянет уже собранный образ, а не предыдущий
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Build and Push Docker Image"]
+    types: [completed]
     branches: [staging]
 
 jobs:
   # ─── 1. Проверка синтаксиса ────────────────────────────────────────────────
   build-check:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout code
@@ -45,13 +47,13 @@ jobs:
           script: |
             cd /home/aleks90715/anita-psy-staging
             git pull origin staging
-            # Пул нового образа (уже запушенного build.yml)
+            # Пул нового образа (build.yml уже завершён)
             docker pull ghcr.io/khudoiev/anita-psy-2.0-backend:staging-latest
             # Перезапуск контейнеров
             docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d --build
-            # Ждем готовности бэкенда перед миграциями (до 30 секунд)
+            # Ждем готовности бэкенда перед миграциями (до 60 секунд)
             echo "Waiting for backend to be ready..."
-            for i in {1..30}; do
+            for i in {1..60}; do
               if [ "$(docker inspect -f '{{.State.Running}}' anita-backend-staging-srv)" == "true" ]; then
                 echo "Backend is running, executing migrations..."
                 docker exec anita-db-staging-srv psql -U anita_staging -d anita_staging \
