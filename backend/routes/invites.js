@@ -35,9 +35,10 @@ router.post('/', async (req, res) => {
     const queryParams = exp ? [token, label, maxUses || 1, exp] : [token, label, maxUses || 1];
     
     const result = await db.query(queryStr, queryParams);
-    
-    await logAdminAction(req.user.adminId, 'create_invite', 'invite', result.rows[0].id, { label, maxUses, exp });
-    res.json(result.rows[0]);
+    const inv = result.rows[0];
+    const frontendUrl = process.env.FRONTEND_URL || '';
+    await logAdminAction(req.user.adminId, 'create_invite', 'invite', inv.id, { label, maxUses, exp });
+    res.json({ ...inv, invite_url: `${frontendUrl}/register?token=${inv.token}` });
   } catch (err) {
     res.status(500).json({ error: 'Ошибка сервера' });
   }

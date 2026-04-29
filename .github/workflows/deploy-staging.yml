@@ -62,6 +62,7 @@ jobs:
               echo "Waiting..."
               sleep 1
             done
+            docker image prune -f
 
       - name: Notify success
         if: success()

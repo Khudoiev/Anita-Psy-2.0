@@ -350,7 +350,7 @@ document.getElementById('save-invite-btn').addEventListener('click', async () =>
   const maxUses = document.getElementById('invite-max').value;
   const exp = document.getElementById('invite-exp').value;
   const res = await apiCall('POST', '/admin/invites', { label, maxUses: parseInt(maxUses), expiresAt: exp || null });
-  document.getElementById('new-invite-link').value = `${window.location.origin}/register?token=${res.token}`;
+  document.getElementById('new-invite-link').value = res.invite_url || `${window.location.origin}/register?token=${res.token}`;
   document.getElementById('new-invite-link-container').style.display = 'block';
   loadInvites();
 });
