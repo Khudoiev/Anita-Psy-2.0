@@ -101,7 +101,6 @@ router.post('/auth/join', async (req, res) => {
 router.post('/auth/register', requireAuth, async (req, res) => {
   if (req.user.role !== 'user') return res.status(403).json({ error: 'Только для пользователей' });
 
-  const token = req.query.token || req.body.token; // Читаем token из query (согласно задаче)
   const { username, password, secretQuestion, secretAnswer } = req.body;
 
   // Валидация
@@ -322,6 +321,7 @@ router.post('/auth/admin/login', async (req, res) => {
     const token = jwt.sign({ adminId: admin.id, role: 'admin' }, process.env.JWT_SECRET, { expiresIn: '24h' });
     res.json({ token });
   } catch (err) {
+    console.error('[admin/login error]', err);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
