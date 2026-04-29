@@ -33,35 +33,10 @@
 # ─── GIT WORKFLOW ─────────────────────────────────────────────────────────────
 
 push-staging:
-	@echo "📦 Отправляем develop → staging → GitHub..."
-	@CURRENT=$$(git rev-parse --abbrev-ref HEAD); \
-	if [ "$$CURRENT" != "develop" ]; then \
-	  echo "❌ Сейчас на ветке '$$CURRENT'. Переключись на develop: git checkout develop"; \
-	  exit 1; \
-	fi
-	@if [ -n "$$(git status --porcelain)" ]; then \
-	  echo "❌ Есть несохранённые изменения! Сделай commit."; \
-	  git status --short; \
-	  exit 1; \
-	fi
-	git checkout staging
-	git merge develop
-	git push origin staging
-	git checkout develop
-	@echo "✅ Запушено в staging. GitHub Actions деплоит на сервер."
+	@powershell -ExecutionPolicy Bypass -Command "& .\run.ps1 push-staging"
 
 push-prod:
-	@echo "🚀 Отправляем staging → main → GitHub..."
-	@CURRENT=$$(git rev-parse --abbrev-ref HEAD); \
-	if [ "$$CURRENT" != "staging" ] && [ "$$CURRENT" != "develop" ]; then \
-	  echo "❌ Переключись на staging или develop перед push-prod"; \
-	  exit 1; \
-	fi
-	git checkout main
-	git merge staging
-	git push origin main
-	git checkout develop
-	@echo "✅ Запушено в main. GitHub Actions деплоит на production."
+	@powershell -ExecutionPolicy Bypass -Command "& .\run.ps1 push-prod"
 
 # ─── СЕРВЕРНЫЙ STAGING ────────────────────────────────────────────────────────
 

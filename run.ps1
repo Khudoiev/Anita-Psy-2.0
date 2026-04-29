@@ -1,7 +1,9 @@
-param (
-    [Parameter(Mandatory=$true)]
-    [string]$Target
-)
+$Target = $args[0]
+
+if (-not $Target) {
+    Write-Host "❌ Ошибка: Не указана команда (Target)" -ForegroundColor Red
+    exit 1
+}
 
 switch ($Target) {
     "push-staging" {
@@ -51,6 +53,5 @@ switch ($Target) {
 
     default {
         Write-Host "❌ Неизвестная команда: $Target" -ForegroundColor Red
-        Write-Host "Доступные команды: push-staging, push-prod, status"
     }
 }
