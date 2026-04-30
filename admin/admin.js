@@ -1,4 +1,5 @@
 const API_BASE = '/api';
+const config = { frontendUrl: '' };
 
 function getHeaders() {
   const token = localStorage.getItem('anita_admin_jwt');
@@ -121,6 +122,7 @@ async function loadDashboard() {
     document.getElementById('stat-total').textContent = stats.totalUsers;
     document.getElementById('stat-avg').textContent = stats.avgSessionMinutes;
     document.getElementById('stat-hours').textContent = stats.totalHours;
+    config.frontendUrl = stats.frontendUrl || window.location.origin;
     loadInvites();
     loadUsers();
     
@@ -140,7 +142,7 @@ async function loadInvites() {
   ui.invitesTable.innerHTML = '';
   invites.forEach(inv => {
     const tr = document.createElement('tr');
-    const link = inv.invite_url || `/register?token=${inv.token}`;
+    const link = inv.invite_url || `${config.frontendUrl}/register?token=${inv.token}`;
     tr.innerHTML = `
       <td>${inv.label || '—'}</td>
       <td><input type="text" value="${link}" readonly style="background:transparent; border:none; outline:none; width:200px; color:var(--accent-primary)"></td>
@@ -350,7 +352,7 @@ document.getElementById('save-invite-btn').addEventListener('click', async () =>
   const maxUses = document.getElementById('invite-max').value;
   const exp = document.getElementById('invite-exp').value;
   const res = await apiCall('POST', '/admin/invites', { label, maxUses: parseInt(maxUses), expiresAt: exp || null });
-  document.getElementById('new-invite-link').value = res.invite_url || `${window.location.origin}/register?token=${res.token}`;
+  document.getElementById('new-invite-link').value = res.invite_url || `${config.frontendUrl}/register?token=${res.token}`;
   document.getElementById('new-invite-link-container').style.display = 'block';
   loadInvites();
 });

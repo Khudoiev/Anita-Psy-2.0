@@ -125,7 +125,8 @@ router.get('/stats', async (req, res) => {
       todayUsers: parseInt(todayResult.rows[0].count),
       totalUsers: parseInt(totalUsersResult.rows[0].count),
       avgSessionMinutes: Math.round((durationResult.rows[0].avg_sec || 0) / 60),
-      totalHours: Math.round((durationResult.rows[0].total_sec || 0) / 3600)
+      totalHours: Math.round((durationResult.rows[0].total_sec || 0) / 3600),
+      frontendUrl: process.env.FRONTEND_URL || ''
     });
   } catch (err) {
     res.status(500).json({ error: 'Ошибка сервера' });
