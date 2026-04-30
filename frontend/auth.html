@@ -130,6 +130,7 @@
         <input type="text" id="reg-secret-a" placeholder="Ответ (регистр не важен)">
       </div>
       <button class="btn-primary" id="btn-register">Создать аккаунт</button>
+      <button class="btn-primary" id="btn-skip-register" style="background:none; border:1px solid var(--border); color:var(--text-secondary); margin-top:12px;">Пропустить и войти анонимно</button>
       <div class="error-msg" id="register-error"></div>
       <div class="loader" id="register-loader"></div>
       <p class="hint" style="color:var(--text-muted)">
@@ -278,6 +279,15 @@
       } catch (e) { /* non-blocking */ }
 
       localStorage.setItem('anita_jwt', pendingJwt);
+      // Вместо редиректа - показываем регистрацию
+      document.getElementById('consent-modal').style.display = 'none';
+      document.getElementById('subtitle').textContent = 'Создай аккаунт';
+      switchTab('register');
+    });
+
+    document.getElementById('btn-skip-register').addEventListener('click', () => {
+      if (!pendingJwt) return;
+      localStorage.setItem('anita_jwt', pendingJwt);
       window.location.href = '/';
     });
 
@@ -362,7 +372,7 @@
       if (password !== password2) { err.textContent = 'Пароли не совпадают'; return; }
       if (password.length < 8) { err.textContent = 'Пароль минимум 8 символов'; return; }
 
-      const jwt = localStorage.getItem('anita_jwt');
+      const jwt = localStorage.getItem('anita_jwt') || pendingJwt;
       if (!jwt) { err.textContent = 'Сначала войди по инвайт-ссылке'; return; }
 
       loader.style.display = 'block';
