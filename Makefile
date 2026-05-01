@@ -45,11 +45,11 @@ staging:
 
 staging-stop:
 	@echo "🛑 Останавливаем серверный staging..."
-	docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server down
+	@ssh -o BatchMode=yes wot20@34.140.213.8 "cd /home/aleks90715/anita-psy-staging && sudo docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server down"
 	@echo "✅ Остановлен"
 
 staging-logs:
-	docker-compose -f infra/docker-compose.staging-server.yml logs -f --tail=100
+	ssh -o BatchMode=yes wot20@34.140.213.8 "sudo docker logs anita-backend-staging-srv --tail=100 -f"
 
 # ─── PRODUCTION ───────────────────────────────────────────────────────────────
 
@@ -58,11 +58,11 @@ prod:
 
 prod-stop:
 	@echo "🛑 Останавливаем production..."
-	docker-compose -f docker-compose.yml down
+	@ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/Anita Production 2.1' && docker-compose -f docker-compose.yml down"
 	@echo "✅ Остановлен"
 
 prod-logs:
-	docker-compose -f docker-compose.yml logs -f --tail=100
+	ssh -o BatchMode=yes wot20@34.140.213.8 "docker logs anita-backend --tail=100 -f"
 
 # ─── МОНИТОРИНГ ───────────────────────────────────────────────────────────────
 
@@ -71,7 +71,7 @@ status:
 	@echo "═══════════════════════════════════════════════════"
 	@echo "  ЗАПУЩЕННЫЕ КОНТЕЙНЕРЫ"
 	@echo "═══════════════════════════════════════════════════"
-	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" 2>/dev/null || echo "Docker не запущен"
+	@ssh -o BatchMode=yes wot20@34.140.213.8 'sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"' 2>/dev/null || echo "Сервер недоступен"
 	@echo ""
 
 health:
@@ -79,10 +79,10 @@ health:
 	@echo "═══════════════════════════════════════════════════"
 	@echo "  HEALTH CHECK"
 	@echo "═══════════════════════════════════════════════════"
-	@echo -n "  Staging  http://localhost:8081/api/health → "
-	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8081/api/health 2>/dev/null || echo "недоступен"
-	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:4000/api/health  → "
-	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:4000/api/health 2>/dev/null || echo "недоступен"
+	@echo -n "  Staging    https://staging.anita-psy.online/api/health → "
+	@curl -s -o /dev/null -w "%{http_code}\n" https://staging.anita-psy.online/api/health 2>/dev/null || echo "недоступен"
+	@echo -n "  Production https://anita-psy.online/api/health → "
+	@curl -s -o /dev/null -w "%{http_code}\n" https://anita-psy.online/api/health 2>/dev/null || echo "недоступен"
 	@echo ""
 
 server-prune:
