@@ -237,15 +237,6 @@ router.patch('/users/:id/note', async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Ошибка сохранения заметки' }); }
 });
 
-router.patch('/users/:id/block', async (req, res) => {
-  try {
-    const result = await db.query('UPDATE users SET is_blocked = NOT is_blocked WHERE id = $1 RETURNING is_blocked', [req.params.id]);
-    const blocked = result.rows[0].is_blocked;
-    await logAdminAction(req.user.adminId, blocked ? 'block_user' : 'unblock_user', 'user', req.params.id, { is_blocked: blocked });
-    res.json({ is_blocked: blocked });
-  } catch (err) { res.status(500).json({ error: 'Ошибка сервера' }); }
-});
-
 // Blacklist IP
 router.get('/blacklist', async (req, res) => {
   try {
