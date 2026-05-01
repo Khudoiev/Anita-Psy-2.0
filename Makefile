@@ -27,7 +27,7 @@
 .PHONY: push-staging push-prod \
         staging staging-stop staging-logs \
         prod prod-stop prod-logs \
-        status health
+        status health server-prune
 
 
 # ─── GIT WORKFLOW ─────────────────────────────────────────────────────────────
@@ -81,6 +81,11 @@ health:
 	@echo "═══════════════════════════════════════════════════"
 	@echo -n "  Staging  http://localhost:8081/api/health → "
 	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8081/api/health 2>/dev/null || echo "недоступен"
-	@echo -n "  Prod     http://localhost:4000/api/health  → "
+	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:4000/api/health  → "
 	@curl -s -o /dev/null -w "%{http_code}\n" http://localhost:4000/api/health 2>/dev/null || echo "недоступен"
 	@echo ""
+
+server-prune:
+	@echo "🧹 Очистка сервера (docker system prune)..."
+	@ssh -o BatchMode=yes wot20@34.140.213.8 "sudo docker system prune -af"
+	@echo "✅ Сервер очищен"

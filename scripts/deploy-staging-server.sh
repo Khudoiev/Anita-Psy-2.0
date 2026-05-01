@@ -40,10 +40,11 @@ echo -e "${YELLOW}📦 Деплоим на сервере (загружаем о
 
 # Путь на сервере: /home/aleks90715/anita-psy-staging
 ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/anita-psy-staging' && \
-  git checkout staging && \
-  git pull origin staging && \
-  docker pull ghcr.io/khudoiev/anita-psy-2.0-backend:staging-latest && \
-  docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d && \
-  docker exec anita-backend-staging-srv npm run migrate:up"
+  sudo git fetch origin staging && \
+  sudo git reset --hard origin/staging && \
+  sudo git clean -fd && \
+  sudo docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d --build && \
+  sudo docker exec anita-backend-staging-srv npm run migrate:up && \
+  sudo docker system prune -f"
 
 echo -e "${GREEN}✅ Staging деплой успешно завершен!${NC}"
