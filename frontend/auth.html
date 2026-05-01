@@ -285,7 +285,7 @@
     });
 
     document.getElementById('btn-skip-register').addEventListener('click', () => {
-      if (!pendingJwt) return;
+      if (!pendingJwt) { switchTab('invite'); return; }
       localStorage.setItem('anita_jwt', pendingJwt);
       window.location.href = '/';
     });
@@ -371,8 +371,8 @@
       if (password !== password2) { err.textContent = 'Пароли не совпадают'; return; }
       if (password.length < 8) { err.textContent = 'Пароль минимум 8 символов'; return; }
 
-      const jwt = pendingJwt || localStorage.getItem('anita_jwt');
-      if (!jwt) { err.textContent = 'Сначала войди по инвайт-ссылке'; return; }
+      const jwt = pendingJwt;
+      if (!jwt) { switchTab('invite'); return; }
 
       loader.style.display = 'block';
       try {
