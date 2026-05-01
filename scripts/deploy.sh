@@ -1,5 +1,5 @@
 #!/bin/bash
-# deploy.sh — безопасный деплой на production через GHCR
+# deploy.sh — локальная сборка и деплой на production
 # Использование: ./scripts/deploy.sh
 
 set -e
@@ -31,18 +31,19 @@ fi
 echo -e "${YELLOW}📥 Отправляем изменения в GitHub...${NC}"
 git push origin main
 
-echo -e "${YELLOW}⏳ Ждем сборку образа (рекомендуется проверить Actions в браузере)...${NC}"
-sleep 5
-
 # ─── Деплой на сервере ────────────────────────────────────────────────────────
 
-echo -e "${YELLOW}📦 Деплоим на сервере (загружаем образ из GHCR)...${NC}"
+echo -e "${YELLOW}📦 Деплоим на сервере (локальная сборка)...${NC}"
 
 # Путь на сервере: /home/aleks90715/Anita Production 2.1
 ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/Anita Production 2.1' && \
-  git pull origin main && \
-  docker pull ghcr.io/khudoiev/anita-psy-2.0-backend:main-latest && \
-  docker-compose -f docker-compose.yml up -d && \
-  docker exec anita-backend npm run migrate:up"
+  git fetch origin main && \
+  git reset --hard origin/main && \
+  git clean -fd && \
+  docker-compose -f docker-compose.yml up -d --build && \
+  echo 'Ждём готовности бэкенда...' && \
+  timeout 60 bash -c 'until wget -qO- http://localhost:4000/api/health &>/dev/null; do sleep 2; done' && \
+  docker exec anita-backend npm run migrate:up && \
+  docker system prune -f"
 
-echo -e "${GREEN}✅ Деплой успешно завершен!${NC}"
+echo -e "${GREEN}✅ Production деплой успешно завершен!${NC}"

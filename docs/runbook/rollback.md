@@ -6,15 +6,10 @@
 1. Зайди на сервер по SSH: `ssh wot20@34.140.213.8`
 2. Перейди в папку: `cd '/home/aleks90715/Anita Production 2.1'`
 3. Найди предыдущий стабильный коммит в истории git: `git log --oneline`
-4. Откати ветку `main` к предыдущему состоянию: `git reset --hard <old_commit_hash>`
-5. Скачай образ, соответствующий этому коммиту: `docker pull ghcr.io/khudoiev/anita-psy-2.0-backend:main-<old_commit_hash>`
-6. Отредактируй `docker-compose.yml`, чтобы он указывал на скачанный образ:
-   ```yaml
-   backend:
-     image: ghcr.io/khudoiev/anita-psy-2.0-backend:main-<old_commit_hash>
-   ```
-7. Перезапусти сервисы: `docker-compose up -d`
-8. Вернись к разработчикам и локально исправь проблему. Обязательно откати git историю `main` обратно через `git revert` или исправление фикса.
+4. Откати код к нужному коммиту: `git reset --hard <old_commit_hash>`
+5. Пересобери и перезапусти сервисы из этого кода: `docker-compose -f docker-compose.yml up -d --build`
+6. Дождись готовности бэкенда: `until wget -qO- http://localhost:4000/api/health &>/dev/null; do sleep 2; done`
+7. Вернись к разработчикам и локально исправь проблему. Обязательно откати git историю `main` через `git revert` или патч-фикс.
 
 ## Откат БД (Миграции)
 Если была применена ошибочная миграция (со 2 фазы), используй:

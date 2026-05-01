@@ -1,5 +1,5 @@
 #!/bin/bash
-# deploy-staging-server.sh — безопасный деплой на staging через GHCR
+# deploy-staging-server.sh — локальная сборка и деплой на staging
 # Использование: ./scripts/deploy-staging-server.sh
 
 set -e
@@ -31,12 +31,9 @@ fi
 echo -e "${YELLOW}📥 Отправляем изменения в GitHub...${NC}"
 git push origin staging
 
-echo -e "${YELLOW}⏳ Ждем сборку образа (рекомендуется проверить Actions в браузере)...${NC}"
-sleep 5
-
 # ─── Деплой на сервере ────────────────────────────────────────────────────────
 
-echo -e "${YELLOW}📦 Деплоим на сервере (загружаем образ из GHCR)...${NC}"
+echo -e "${YELLOW}📦 Деплоим на сервере (локальная сборка)...${NC}"
 
 # Путь на сервере: /home/aleks90715/anita-psy-staging
 ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/anita-psy-staging' && \
@@ -44,6 +41,8 @@ ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/anita-psy-staging'
   sudo git reset --hard origin/staging && \
   sudo git clean -fd && \
   sudo docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d --build && \
+  echo 'Ждём готовности бэкенда...' && \
+  timeout 60 bash -c 'until sudo docker exec anita-backend-staging-srv wget -qO- http://localhost:4001/api/health &>/dev/null; do sleep 2; done' && \
   sudo docker exec anita-backend-staging-srv npm run migrate:up && \
   sudo docker system prune -f"
 

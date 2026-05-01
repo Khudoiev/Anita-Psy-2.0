@@ -1,10 +1,8 @@
+const cron = require('node-cron');
 const db = require('./db');
 const logger = require('./services/logger');
-
-// Run every hour
-const HOURLY = 60 * 60 * 1000;
-// Run every 10 minutes
-const TEN_MIN = 10 * 60 * 1000;
+const { generateImprovementSuggestions } = require('./services/promptEvolution');
+const { updateTechniqueOutcome } = require('./services/techniqueTracker');
 
 async function cleanupExpiredMessages() {
   try {
@@ -28,10 +26,9 @@ async function refreshViews() {
 
 async function cleanupOldSessions() {
   try {
-    // Mark sessions as inactive if no heartbeat for 24 hours
     const res = await db.query(`
-      UPDATE sessions 
-      SET is_active = false, ended_at = NOW() 
+      UPDATE sessions
+      SET is_active = false, ended_at = NOW()
       WHERE is_active = true AND last_heartbeat < NOW() - INTERVAL '24 hours'
     `);
     if (res.rowCount > 0) {
@@ -42,14 +39,44 @@ async function cleanupOldSessions() {
   }
 }
 
-// Initial run
+async function markChurnedConversations() {
+  try {
+    const churned = await db.query(`
+      SELECT DISTINCT c.id FROM conversations c
+      JOIN technique_outcomes t ON t.conversation_id = c.id
+      WHERE t.outcome IS NULL
+      AND c.updated_at < NOW() - INTERVAL '7 days'
+    `);
+    for (const conv of churned.rows) {
+      await updateTechniqueOutcome(conv.id, 'user_churned');
+    }
+    if (churned.rows.length > 0) {
+      logger.info({ marked: churned.rows.length }, '[Cron] Churned conversations marked');
+    }
+  } catch (err) {
+    logger.error({ err: err.message }, '[Cron] Churn marking failed');
+  }
+}
+
+async function generatePromptSuggestions() {
+  try {
+    const suggestions = await generateImprovementSuggestions();
+    logger.info({ count: suggestions.length }, '[Cron] Improvement suggestions generated');
+  } catch (err) {
+    logger.error({ err: err.message }, '[Cron] Suggestion generation failed');
+  }
+}
+
+// Initial runs on startup
 cleanupExpiredMessages();
 refreshViews();
 cleanupOldSessions();
 
-// Schedule
-setInterval(cleanupExpiredMessages, HOURLY);
-setInterval(refreshViews, TEN_MIN);
-setInterval(cleanupOldSessions, HOURLY);
+// ─── Schedule ─────────────────────────────────────────────────────────────────
+cron.schedule('0 3 * * *',   cleanupExpiredMessages);    // daily   03:00
+cron.schedule('*/10 * * * *', refreshViews);             // every   10 min
+cron.schedule('0 * * * *',   cleanupOldSessions);        // hourly
+cron.schedule('0 4 * * *',   markChurnedConversations);  // daily   04:00
+cron.schedule('0 5 * * 0',   generatePromptSuggestions); // weekly  Sun 05:00
 
-logger.info('[Cron] Tasks scheduled and running');
+logger.info('[Cron] All tasks scheduled');
