@@ -20,9 +20,9 @@ jobs:
             git fetch origin staging
             git reset --hard origin/staging
             git clean -fd
-            docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d --build
+            docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d --build --remove-orphans
             echo "Waiting for backend..."
-            timeout 60 bash -c 'until wget -qO- http://localhost:4001/api/health &>/dev/null; do sleep 2; done'
+            timeout 60 bash -c 'until docker exec anita-backend-staging-srv wget -qO- http://localhost:4001/api/health &>/dev/null; do sleep 2; done'
             docker exec anita-backend-staging-srv npm run migrate:up
             docker system prune -f
 

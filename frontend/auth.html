@@ -235,6 +235,7 @@
 
     // Если пришли с invite — сначала создаём анонимную учётку, потом предлагаем зарегистрироваться
     if (inviteToken) {
+      document.getElementById('manual-invite-token').value = inviteToken;
       handleInvite(inviteToken);
     }
     // Если пришли с reset_token — показываем форму нового пароля

@@ -40,7 +40,7 @@ ssh -o BatchMode=yes wot20@34.140.213.8 "cd '/home/aleks90715/Anita Production 2
   git fetch origin main && \
   git reset --hard origin/main && \
   git clean -fd && \
-  docker-compose -f docker-compose.yml up -d --build && \
+  docker-compose -f docker-compose.yml up -d --build --remove-orphans && \
   echo 'Ждём готовности бэкенда...' && \
   timeout 60 bash -c 'until wget -qO- http://localhost:4000/api/health &>/dev/null; do sleep 2; done' && \
   docker exec anita-backend npm run migrate:up && \
