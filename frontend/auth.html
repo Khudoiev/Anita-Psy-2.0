@@ -278,7 +278,6 @@
         });
       } catch (e) { /* non-blocking */ }
 
-      localStorage.setItem('anita_jwt', pendingJwt);
       // Вместо редиректа - показываем регистрацию
       document.getElementById('consent-modal').style.display = 'none';
       document.getElementById('subtitle').textContent = 'Создай аккаунт';
@@ -372,7 +371,7 @@
       if (password !== password2) { err.textContent = 'Пароли не совпадают'; return; }
       if (password.length < 8) { err.textContent = 'Пароль минимум 8 символов'; return; }
 
-      const jwt = localStorage.getItem('anita_jwt') || pendingJwt;
+      const jwt = pendingJwt || localStorage.getItem('anita_jwt');
       if (!jwt) { err.textContent = 'Сначала войди по инвайт-ссылке'; return; }
 
       loader.style.display = 'block';
