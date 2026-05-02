@@ -16,11 +16,15 @@
       } catch { return false; }
     }
     const jwt = localStorage.getItem('anita_jwt');
-    if (!jwt || !isTokenValid(jwt)) {
+    const urlParams = new URLSearchParams(window.location.search);
+    const inviteToken = urlParams.get('token') || urlParams.get('invite');
+
+    if (inviteToken) {
       localStorage.removeItem('anita_jwt');
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get('token') || params.get('invite');
-      window.location.href = token ? `/auth.html?token=${token}` : '/auth.html';
+      window.location.href = `/auth.html?token=${inviteToken}`;
+    } else if (!jwt || !isTokenValid(jwt)) {
+      localStorage.removeItem('anita_jwt');
+      window.location.href = '/auth.html';
     }
 
     // Failsafe: Remove splash screen after 6 seconds even if JS fails
@@ -188,6 +192,16 @@
       <div class="modal-actions">
         <button class="modal-btn secondary" id="modal-cancel">Отмена</button>
         <button class="modal-btn primary" id="modal-save">Сохранить</button>
+      </div>
+      <div style="margin-top:16px; padding-top:16px; border-top:0.5px solid var(--border);">
+        <button id="logout-btn"
+          style="width:100%; padding:10px; border-radius:var(--r-element);
+                 background:rgba(255,80,80,0.1); border:1px solid rgba(255,80,80,0.2);
+                 color:#ffbaba; font-size:13px; cursor:pointer; transition:0.2s;"
+          onmouseover="this.style.background='rgba(255,80,80,0.2)'"
+          onmouseout="this.style.background='rgba(255,80,80,0.1)'">
+          Выйти из аккаунта
+        </button>
       </div>
     </div>
   </div>

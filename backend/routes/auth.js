@@ -170,7 +170,7 @@ router.post('/auth/login', async (req, res) => {
 
   try {
     const result = await db.query(
-      `SELECT id, password_hash, is_blocked, registered_at FROM users WHERE username = $1`,
+      `SELECT id, username, password_hash, is_blocked, registered_at FROM users WHERE username = $1`,
       [username]
     );
     if (result.rows.length === 0) {
@@ -210,7 +210,7 @@ router.post('/auth/login', async (req, res) => {
       { expiresIn: '30d' }
     );
 
-    res.json({ token, username });
+    res.json({ token, username: user.username });
 
   } catch (err) {
     console.error('[login]', err);
@@ -345,6 +345,22 @@ router.post('/auth/save-consent', requireAuth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('[save-consent]', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// GET /api/auth/me — текущий авторизованный пользователь
+router.get('/auth/me', requireAuth, async (req, res) => {
+  if (req.user.role !== 'user') return res.status(403).json({ error: 'Forbidden' });
+  try {
+    const result = await db.query(
+      'SELECT id, username, registered_at FROM users WHERE id = $1',
+      [req.user.userId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Не найден' });
+    res.json({ username: result.rows[0].username });
+  } catch (err) {
+    console.error('[GET /auth/me]', err);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

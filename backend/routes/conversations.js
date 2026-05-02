@@ -278,14 +278,20 @@ router.post('/:id/insights', async (req, res) => {
 router.get('/memory', async (req, res) => {
   try {
     const { getProfile } = require('../services/memoryService');
-    const profile = await getProfile(req.user.userId);
-    // Для совместимости с MemoryManager (app.js)
+    let profile;
+    try {
+      profile = await getProfile(req.user.userId);
+    } catch (e) {
+      console.warn('[GET /memory] getProfile failed, using defaults:', e.message);
+      profile = {};
+    }
     res.json({
-      facts: [], // Факты теперь отдельно, возвращаем пустой массив для кэша
-      themes: profile.themes || [],
-      techniques: profile.techniques || [],
-      name_hint: profile.name,
-      mood_trajectory: profile.mood_history?.at(-1)?.score || null
+      facts:           [],
+      themes:          profile?.themes        || [],
+      techniques:      profile?.techniques    || [],
+      name_hint:       profile?.name          || null,
+      mood_trajectory: profile?.mood_history?.at(-1)?.score || null,
+      is_onboarded:    profile?.is_onboarded  || false,
     });
   } catch (err) {
     console.error('[GET /memory]', err);

@@ -372,6 +372,25 @@ class AnitaApp {
     this.setupSession();
     this.bindEvents();
 
+    // Синхронизируем username с бэкендом при каждом запуске
+    try {
+      const meRes = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${this.storage.getToken()}` }
+      });
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        if (meData.username) {
+          const profile = this.storage.getProfile();
+          if (!profile.name) {
+            profile.name = meData.username;
+            this.storage.saveProfile(profile);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[Profile sync /auth/me]', e);
+    }
+
     // Сплэш → загрузка данных → welcome
     console.log('[Anita] Initializing app components...');
     setTimeout(async () => {
@@ -497,6 +516,7 @@ class AnitaApp {
     bind('#insights-skip-btn', 'click', () => { this.$('#insights-modal').classList.remove('show'); });
     bind('#insights-save-btn', 'click', () => this.saveInsights());
 
+    bind('#logout-btn', 'click', () => this.logout());
     bind('#diary-btn', 'click', () => this.openDiary());
     bind('#diary-close-btn', 'click', () => this.closeDiary());
 
@@ -1033,6 +1053,15 @@ class AnitaApp {
 
   openSettings()      { this.dom.settingsModal.classList.add('show'); }
   closeSettings()     { this.dom.settingsModal.classList.remove('show'); }
+
+  logout() {
+    if (!confirm('Выйти из аккаунта?')) return;
+    this.storage.clearToken();
+    localStorage.removeItem('anita_profile');
+    localStorage.removeItem('anita_last_chat');
+    localStorage.removeItem('anita_insights');
+    window.location.href = '/auth.html';
+  }
 
   openDiary() {
     const modal = this.$('#diary-modal');
