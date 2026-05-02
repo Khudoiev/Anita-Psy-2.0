@@ -46,15 +46,47 @@ router.post('/', async (req, res) => {
 
 // DELETE /api/admin/invites/:id
 router.delete('/:id', async (req, res) => {
+  const client = await db.pool.connect();
   try {
-    const invite = await db.query('SELECT label FROM invites WHERE id = $1', [req.params.id]);
-    await db.query('DELETE FROM invites WHERE id = $1', [req.params.id]);
-    if (invite.rows.length) {
-      await logAdminAction(req.user.adminId, 'delete_invite', 'invite', req.params.id, { label: invite.rows[0].label });
+    await client.query('BEGIN');
+
+    const invite = await client.query(
+      'SELECT id, label FROM invites WHERE id = $1',
+      [req.params.id]
+    );
+    if (!invite.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Инвайт не найден' });
     }
-    res.json({ success: true });
+
+    const usersUpdated = await client.query(
+      'UPDATE users SET invite_id = NULL WHERE invite_id = $1 RETURNING id',
+      [req.params.id]
+    );
+
+    await client.query('DELETE FROM invites WHERE id = $1', [req.params.id]);
+
+    await client.query('COMMIT');
+
+    await logAdminAction(
+      req.user.adminId,
+      'delete_invite',
+      'invite',
+      req.params.id,
+      {
+        label: invite.rows[0].label,
+        users_unlinked: usersUpdated.rowCount,
+      }
+    );
+
+    res.json({ success: true, users_unlinked: usersUpdated.rowCount });
+
   } catch (err) {
-    res.status(500).json({ error: 'Ошибка при удалении. Возможно есть связанные пользователи.' });
+    await client.query('ROLLBACK');
+    console.error('[DELETE invite]', err);
+    res.status(500).json({ error: 'Ошибка при удалении инвайта' });
+  } finally {
+    client.release();
   }
 });
 
