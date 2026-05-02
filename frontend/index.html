@@ -89,9 +89,9 @@
             <div class="sidebar-profile-sessions" id="profile-sessions" style="display:none;">0 сессий</div>
           </div>
           <div class="sidebar-profile-actions" style="display:flex; align-items:center;">
-            <a href="/profile.html" class="sidebar-profile-btn" id="profile-btn" aria-label="Мой Дневник" style="color:var(--text-secondary); margin-right:8px; padding:6px; transition:0.2s; border-radius:6px; background:rgba(255,255,255,0.05);" onmouseover="this.style.color='#f8fafc';this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.color='var(--text-secondary)';this.style.background='rgba(255,255,255,0.05)'">
+            <button class="sidebar-profile-btn" id="diary-btn" aria-label="Мой Дневник" style="color:var(--text-secondary); margin-right:8px; padding:6px; transition:0.2s; border-radius:6px; background:rgba(255,255,255,0.05);" onmouseover="this.style.color='#f8fafc';this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.color='var(--text-secondary)';this.style.background='rgba(255,255,255,0.05)'">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-            </a>
+            </button>
             <button class="sidebar-settings-btn" id="settings-btn" aria-label="Настройки">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
@@ -151,7 +151,7 @@
 
         <div class="chat-area" id="chat-area"></div>
 
-        <div class="disclaimer">Anita — не замена живому специалисту. Если вы в кризисе — обратитесь за помощью.</div>
+        <div class="disclaimer">Anita — не замена живому специалисту. Но поможет разобраться в себе.</div>
 
         <div class="input-area">
           <div class="input-wrap">
@@ -204,6 +204,18 @@
     </div>
   </div>
 
-  <script src="app.js?v=2.2"></script>
+  <!-- ===== DIARY MODAL ===== -->
+  <div class="modal-overlay" id="diary-modal">
+    <div class="modal" style="width:520px; max-height:80vh; display:flex; flex-direction:column;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div class="modal-title" style="margin-bottom:0;">📓 Мой дневник</div>
+        <button id="diary-close-btn" style="background:none; color:var(--text-muted); font-size:20px; line-height:1; padding:4px 8px;">&times;</button>
+      </div>
+      <div id="diary-content" style="overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:12px;">
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=2.2" defer></script>
 </body>
 </html>

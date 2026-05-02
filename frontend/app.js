@@ -334,6 +334,16 @@ class AnitaApp {
 
     this.$ = (s) => document.querySelector(s);
     this.$$ = (s) => document.querySelectorAll(s);
+  }
+
+  // ══════════════════════════════════════════
+  // INIT
+  // ══════════════════════════════════════════
+  async init() {
+    if (!this.storage.getToken()) {
+      window.location.href = '/auth.html' + window.location.search;
+      return;
+    }
 
     this.dom = {
       splash:             this.$('#splash'),
@@ -358,16 +368,6 @@ class AnitaApp {
       sessionProgress:    this.$('#session-progress'),
       turnCount:          this.$('#turn-count'),
     };
-  }
-
-  // ══════════════════════════════════════════
-  // INIT
-  // ══════════════════════════════════════════
-  async init() {
-    if (!this.storage.getToken()) {
-      window.location.href = '/auth.html' + window.location.search;
-      return;
-    }
 
     this.setupSession();
     this.bindEvents();
@@ -390,6 +390,18 @@ class AnitaApp {
 
       this.updateProfile();
       this.showWelcome();
+
+      const lastChatId = localStorage.getItem('anita_last_chat');
+      if (lastChatId) {
+        const exists = this.storage.getChatsCache().find(c => c.id === lastChatId);
+        if (exists) {
+          await this.loadChat(lastChatId);
+          return;
+        } else {
+          localStorage.removeItem('anita_last_chat');
+        }
+      }
+
       console.log('[Anita] App ready.');
     }, CONFIG.SPLASH_DURATION);
   }
@@ -482,8 +494,18 @@ class AnitaApp {
     }
 
     bind('#end-session-btn', 'click', () => this.endSession());
-    bind('#insights-skip-btn', 'click', () => { this.$('#insights-modal').classList.remove('visible'); });
+    bind('#insights-skip-btn', 'click', () => { this.$('#insights-modal').classList.remove('show'); });
     bind('#insights-save-btn', 'click', () => this.saveInsights());
+
+    bind('#diary-btn', 'click', () => this.openDiary());
+    bind('#diary-close-btn', 'click', () => this.closeDiary());
+
+    const diaryModal = this.$('#diary-modal');
+    if (diaryModal) {
+      diaryModal.addEventListener('click', e => {
+        if (e.target === diaryModal) this.closeDiary();
+      });
+    }
   }
 
   // ══════════════════════════════════════════
@@ -535,7 +557,7 @@ class AnitaApp {
        `;
     });
     this.currentInsights = insights;
-    this.$('#insights-modal').classList.add('visible');
+    this.$('#insights-modal').classList.add('show');
   }
 
   saveInsights() {
@@ -558,12 +580,18 @@ class AnitaApp {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${this.storage.getToken()}` },
       body: JSON.stringify({ approved })
     }).then(() => {
-      this.$('#insights-modal').classList.remove('visible');
+      this.$('#insights-modal').classList.remove('show');
       if (btn) btn.textContent = 'Сохранить выбранное';
       this.appendBubble('anita', 'Я сохранила эти наблюдения. Можем вернуться к ним в следующий раз.');
+      try {
+        const existing = JSON.parse(localStorage.getItem('anita_insights') || '[]');
+        const withDate = approved.map(ins => ({ ...ins, date: new Date().toISOString() }));
+        const merged = [...existing, ...withDate];
+        localStorage.setItem('anita_insights', JSON.stringify(merged.slice(-100)));
+      } catch {}
     }).catch(() => {
       if (btn) btn.textContent = 'Сохранить выбранное';
-      this.$('#insights-modal').classList.remove('visible');
+      this.$('#insights-modal').classList.remove('show');
     });
   }
 
@@ -596,6 +624,7 @@ class AnitaApp {
     this.dom.welcomeScreen.classList.remove('hidden');
     this.dom.chatView.style.display = 'none';
     this.currentChatId = null;
+    localStorage.removeItem('anita_last_chat');
     this.$$('.chat-item.active').forEach(el => el.classList.remove('active'));
   }
 
@@ -621,6 +650,7 @@ class AnitaApp {
 
   async loadChat(id) {
     this.currentChatId = id;
+    localStorage.setItem('anita_last_chat', id);
 
     // Переключаем вид
     this.dom.welcomeScreen.classList.add('hidden');
@@ -829,7 +859,7 @@ class AnitaApp {
       }
     } catch (err) {
       this.finalizeStreamingBubble();
-      this.hideTyping();
+      this.removeTyping();
       this.handleAIError(err);
     } finally {
       this.isProcessing = false;
@@ -889,7 +919,7 @@ class AnitaApp {
   }
 
   startStreamingBubble() {
-    this.hideTyping();
+    this.removeTyping();
     const div = document.createElement('div');
     div.className = 'message anita';
     div.id = 'streaming-bubble';
@@ -1001,8 +1031,40 @@ class AnitaApp {
     if (this.dom.showProgressToggle) this.dom.showProgressToggle.checked = p.showProgress !== false;
   }
 
-  openSettings()      { this.dom.settingsModal.classList.add('visible'); }
-  closeSettings()     { this.dom.settingsModal.classList.remove('visible'); }
+  openSettings()      { this.dom.settingsModal.classList.add('show'); }
+  closeSettings()     { this.dom.settingsModal.classList.remove('show'); }
+
+  openDiary() {
+    const modal = this.$('#diary-modal');
+    const content = this.$('#diary-content');
+    if (!modal || !content) return;
+
+    let insights = [];
+    try {
+      insights = JSON.parse(localStorage.getItem('anita_insights') || '[]');
+    } catch {}
+
+    if (insights.length === 0) {
+      content.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:40px 20px; font-size:14px;">Здесь появятся твои инсайты после завершения сеансов.<br><br>Поговори с Anita и нажми «Завершить сеанс».</div>';
+    } else {
+      content.innerHTML = insights.slice().reverse().map(ins => `
+        <div style="background:var(--bg-card); border:0.5px solid var(--border); border-radius:var(--r-element); padding:16px;">
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.8px;">
+            ${ins.date ? new Date(ins.date).toLocaleDateString('ru', { day:'numeric', month:'long', year:'numeric' }) : ''}
+          </div>
+          <div style="font-size:14px; font-weight:600; color:var(--foam); margin-bottom:6px;">${this.esc(ins.title || '')}</div>
+          <div style="font-size:13px; color:var(--text-secondary); line-height:1.5;">${this.esc(ins.description || '')}</div>
+        </div>
+      `).join('');
+    }
+
+    modal.classList.add('show');
+  }
+
+  closeDiary() {
+    const modal = this.$('#diary-modal');
+    if (modal) modal.classList.remove('show');
+  }
   saveSettings()      {
     const p = this.storage.getProfile();
     p.name = this.dom.userNameInput.value.trim();
@@ -1015,7 +1077,7 @@ class AnitaApp {
 
   toggleSidebar(open) {
     this.dom.sidebar.classList.toggle('open', open);
-    this.dom.sidebarOverlay.classList.toggle('visible', open);
+    this.dom.sidebarOverlay.classList.toggle('show', open);
   }
 
   onInputChange() {
@@ -1030,7 +1092,9 @@ class AnitaApp {
   }
 
   updateSendBtn() {
-    this.dom.sendBtn.disabled = !this.dom.msgInput.value.trim() || this.isProcessing;
+    const active = !!this.dom.msgInput.value.trim() && !this.isProcessing;
+    this.dom.sendBtn.disabled = !active;
+    this.dom.sendBtn.classList.toggle('active', active);
   }
 
   scrollBottom() {
