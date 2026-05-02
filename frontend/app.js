@@ -458,7 +458,7 @@ class AnitaApp {
   // ══════════════════════════════════════════
   bindEvents() {
     const bind = (id, event, fn) => {
-      const el = id.startsWith('#') ? this.$(id) : id;
+      const el = typeof id === 'string' ? this.$(id) : id;
       if (el) el.addEventListener(event, fn);
       else console.warn(`[Anita] Could not bind ${event} to missing element: ${id}`);
     };
