@@ -331,6 +331,7 @@ class AnitaApp {
     this.isProcessing  = false;
     this.abortController = null;
     this.streamBuffer = '';
+    this._bannerShown = false;
 
     this.$ = (s) => document.querySelector(s);
     this.$$ = (s) => document.querySelectorAll(s);
@@ -876,6 +877,10 @@ class AnitaApp {
         if (messages.length % 8 === 0) {
           this.memory.learn(messages).catch(console.warn);
         }
+
+        if (messages.length === 6 && !this.storage.getProfile().registered && !this._bannerShown) {
+          this.showSaveProgressBanner();
+        }
       }
     } catch (err) {
       this.finalizeStreamingBubble();
@@ -1093,6 +1098,63 @@ class AnitaApp {
   closeDiary() {
     const modal = this.$('#diary-modal');
     if (modal) modal.classList.remove('show');
+  }
+
+  showSaveProgressBanner() {
+    if (this._bannerShown) return;
+    this._bannerShown = true;
+
+    const banner = document.createElement('div');
+    banner.id = 'save-progress-banner';
+    banner.style.cssText = `
+      margin: 12px 0;
+      padding: 14px 16px;
+      background: rgba(26,90,154,0.15);
+      border: 0.5px solid rgba(91,168,224,0.25);
+      border-radius: 12px;
+      font-size: 14px;
+      color: var(--text-primary);
+      line-height: 1.5;
+    `;
+    banner.innerHTML = `
+      <div style="margin-bottom:10px;">
+        💾 Хочешь сохранить наш разговор? Создай аккаунт — и сможешь вернуться в любой момент.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button id="banner-register" style="
+          padding:8px 16px;
+          background:var(--horizon);
+          color:#fff;
+          border:none;
+          border-radius:8px;
+          font-size:13px;
+          cursor:pointer;">
+          Создать аккаунт
+        </button>
+        <button id="banner-skip" style="
+          padding:8px 16px;
+          background:transparent;
+          color:var(--text-secondary);
+          border:0.5px solid var(--border);
+          border-radius:8px;
+          font-size:13px;
+          cursor:pointer;">
+          Позже
+        </button>
+      </div>
+    `;
+
+    this.dom.chatArea.appendChild(banner);
+    this.scrollBottom();
+
+    document.getElementById('banner-register').addEventListener('click', () => {
+      window.location.href = '/auth.html?mode=register';
+    });
+    document.getElementById('banner-skip').addEventListener('click', () => {
+      banner.style.opacity = '0';
+      banner.style.transition = 'opacity 0.3s';
+      setTimeout(() => banner.remove(), 300);
+    });
   }
   saveSettings()      {
     const p = this.storage.getProfile();
