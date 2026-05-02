@@ -7,7 +7,11 @@
     "dev": "nodemon server.js",
     "migrate:up": "node-pg-migrate up",
     "migrate:create": "node-pg-migrate create",
-    "test": "jest --runInBand --forceExit",
+    "test":             "jest --runInBand",
+    "test:unit":        "jest --runInBand --testPathPattern='__tests__/[^/]+\\.test\\.js$'",
+    "test:integration": "jest --runInBand --testPathPattern='integration/'",
+    "test:health":      "jest --runInBand --testPathPattern='health'",
+    "test:ci":          "jest --runInBand --forceExit --detectOpenHandles",
     "test:watch": "jest --watch --runInBand",
     "test:coverage": "jest --coverage --runInBand --forceExit"
   },

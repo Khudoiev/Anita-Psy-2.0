@@ -9,6 +9,8 @@ const express = require('express');
 const cors    = require('cors');
 const Sentry  = require('@sentry/node');
 
+const app = express();
+
 // Sentry Init
 if (process.env.SENTRY_DSN) {
   Sentry.init({
@@ -32,8 +34,6 @@ const conversationsRoutes = require('./routes/conversations');
 const profileRoutes       = require('./routes/profile');
 const checkBlacklist      = require('./middleware/checkBlacklist');
 const requestLogger       = require('./middleware/requestLogger');
-
-const app = express();
 
 if (process.env.SENTRY_DSN) {
   app.use(Sentry.Handlers.requestHandler());

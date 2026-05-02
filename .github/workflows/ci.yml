@@ -52,5 +52,8 @@ jobs:
         working-directory: backend
 
       - name: Run tests
-        run: npm test
+        run: npm run test:ci
         working-directory: backend
+        env:
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          DB_ENCRYPTION_KEY: ci-test-encryption-key-32-chars-!!
