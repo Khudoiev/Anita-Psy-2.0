@@ -219,9 +219,12 @@ class AIService {
         const data = line.slice(6).trim();
         if (data === '[DONE]') { onComplete(); return; }
         try {
-          const { token: tok } = JSON.parse(data);
-          if (tok) onToken(tok);
-        } catch {}
+          const parsed = JSON.parse(data);
+          if (parsed.error) throw new Error('AI_ERROR');
+          if (parsed.token) onToken(parsed.token);
+        } catch (e) {
+          if (e.message === 'AI_ERROR') throw e;
+        }
       }
     }
   }

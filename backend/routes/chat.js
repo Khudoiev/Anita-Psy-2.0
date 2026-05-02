@@ -68,7 +68,7 @@ router.post('/', requireAuth, async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.GROK_MODEL || 'grok-3-mini-fast',
+        model: process.env.GROK_MODEL || 'grok-4.1-fast-reasoning',
         messages: contextMessages,
         temperature: 0.9,
         top_p: 0.95,
@@ -124,10 +124,14 @@ router.post('/stream', requireAuth, async (req, res) => {
   }
 
   // Crisis detection
-  const { checkAndLogCrisis } = require('../services/safetyChecker');
-  const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content || '';
-  const { isCrisis, systemInjection } = await checkAndLogCrisis(lastUserMessage, userId, conversationId);
-  if (isCrisis) systemPrompt += systemInjection;
+  try {
+    const { checkAndLogCrisis } = require('../services/safetyChecker');
+    const lastUserMessage = messages.filter(m => m.role === 'user').at(-1)?.content || '';
+    const { isCrisis, systemInjection } = await checkAndLogCrisis(lastUserMessage, userId, conversationId);
+    if (isCrisis) systemPrompt += systemInjection;
+  } catch (e) {
+    console.warn('[SafetyChecker] skipped:', e.message);
+  }
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -137,7 +141,14 @@ router.post('/stream', requireAuth, async (req, res) => {
   // Background profile parsing (mood and onboarding)
   parseProfileBackground(userId, messages).catch(e => console.error(e));
 
-  const contextMessages = await buildContextWindow(messages, systemPrompt, userId);
+  let contextMessages;
+  try {
+    contextMessages = await buildContextWindow(messages, systemPrompt, userId);
+  } catch (e) {
+    console.error('[ContextWindow] failed:', e.message);
+    res.write(`data: ${JSON.stringify({ error: 'SERVER_ERROR' })}\n\n`);
+    return res.end();
+  }
 
   try {
     const response = await fetch(GROK_API_URL, {
@@ -147,7 +158,7 @@ router.post('/stream', requireAuth, async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.GROK_MODEL || 'grok-3-mini-fast',
+        model: process.env.GROK_MODEL || 'grok-4.1-fast-reasoning',
         messages: contextMessages,
         temperature: 0.9,
         max_tokens: 900,
@@ -172,10 +183,12 @@ router.post('/stream', requireAuth, async (req, res) => {
         if (data === '[DONE]') {
           if (conversationId) {
             const { detectAndSaveTechniques } = require('../services/techniqueTracker');
-            await detectAndSaveTechniques(fullContent, conversationId, Math.ceil(messages.length / 2));
+            detectAndSaveTechniques(fullContent, conversationId, Math.ceil(messages.length / 2))
+              .catch(e => console.warn('[TechniqueTracker]', e.message));
           }
           const { trackTokenUsage } = require('../services/tokenTracker');
-          await trackTokenUsage(userId, promptTokens, completionTokens);
+          trackTokenUsage(userId, promptTokens, completionTokens)
+            .catch(e => console.warn('[TokenTracker]', e.message));
           res.write('data: [DONE]\n\n');
           return res.end();
         }
@@ -216,7 +229,7 @@ router.post('/extract-memory', requireAuth, async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.GROK_MODEL || 'grok-3-mini-fast',
+        model: process.env.GROK_MODEL || 'grok-4.1-fast-reasoning',
         messages: [
           { role: 'system', content: MEMORY_EXTRACT_PROMPT },
           { role: 'user', content: 'Вот диалог:\n\n' + dialog },
