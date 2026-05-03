@@ -88,30 +88,6 @@ describe('Temp ban: бан → 403 → разбан → 200', () => {
 });
 
 // ─────────────────────────────────────────────────────────────
-// Session invalidation при отзыве инвайта
-// ─────────────────────────────────────────────────────────────
-describe('Инвалидация сессии при отзыве инвайта', () => {
-
-  test('после удаления инвайта запрос возвращает 403 session_invalidated', async () => {
-    // Находим invite_id этого юзера
-    const inviteRow = await db.query(
-      'SELECT invite_id FROM users WHERE id = $1',
-      [userId]
-    );
-    const inviteId = inviteRow.rows[0].invite_id;
-
-    // Сохраняем invite_id на юзере но удаляем инвайт
-    await db.query('DELETE FROM invites WHERE id = $1', [inviteId]);
-
-    const res = await request(app)
-      .get('/api/auth/me')
-      .set('Authorization', `Bearer ${userToken}`);
-    expect(res.status).toBe(403);
-    expect(res.body.error).toBe('session_invalidated');
-  });
-});
-
-// ─────────────────────────────────────────────────────────────
 // Шифрование сообщений: round-trip
 // ─────────────────────────────────────────────────────────────
 describe('Шифрование: сохранить → прочитать → текст совпадает', () => {

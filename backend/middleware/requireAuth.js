@@ -29,8 +29,6 @@ const requireAuth = async (req, res, next) => {
     try {
       result = await db.query(
         `SELECT u.is_blocked,
-                u.invite_id,
-                EXISTS(SELECT 1 FROM invites i WHERE i.id = u.invite_id) as invite_exists,
                 EXISTS(
                   SELECT 1 FROM temp_bans tb
                   WHERE tb.user_id = u.id AND tb.unbanned_at IS NULL
@@ -50,13 +48,6 @@ const requireAuth = async (req, res, next) => {
 
     if (userStatus.is_blocked) {
       return res.status(403).json({ error: 'Доступ заблокирован' });
-    }
-
-    if (userStatus.invite_id && !userStatus.invite_exists) {
-      return res.status(403).json({
-        error: 'session_invalidated',
-        message: 'Сессия недействительна (приглашение отозвано).'
-      });
     }
 
     if (userStatus.is_temp_banned) {
