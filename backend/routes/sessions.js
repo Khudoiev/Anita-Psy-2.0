@@ -496,6 +496,7 @@ router.delete('/users/:id', async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
+    console.error('[DELETE user]', err.message);
     res.status(500).json({ error: 'Ошибка удаления' });
   }
 });

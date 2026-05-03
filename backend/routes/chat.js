@@ -167,6 +167,8 @@ router.post('/stream', requireAuth, async (req, res) => {
     });
 
     if (!response.ok) {
+      const errBody = await response.text().catch(() => '');
+      console.error(`[Grok API] ${response.status} ${response.statusText} — ${errBody}`);
       res.write(`data: ${JSON.stringify({ error: 'AI_ERROR' })}\n\n`);
       return res.end();
     }
