@@ -220,7 +220,7 @@ class AIService {
         if (data === '[DONE]') { onComplete(); return; }
         try {
           const parsed = JSON.parse(data);
-          if (parsed.error) throw new Error('AI_ERROR');
+          if (parsed.error) throw new Error(parsed.error);
           if (parsed.token) onToken(parsed.token);
         } catch (e) {
           if (e.message === 'AI_ERROR') throw e;
@@ -936,7 +936,7 @@ class AnitaApp {
         if (attempt === maxRetries) throw err;
 
         const delay = 1000 * Math.pow(2, attempt) + Math.random() * 300;
-        console.warn(`[AI] Attempt ${attempt + 1} failed, retry in ${Math.round(delay)}ms`);
+        console.warn(`[AI] Attempt ${attempt + 1} failed: ${err.message}. Retry in ${Math.round(delay)}ms`);
 
         const streamEl = document.getElementById('streaming-content');
         if (streamEl) streamEl.innerHTML = `<em style="opacity:0.5">Переподключение...</em>`;
