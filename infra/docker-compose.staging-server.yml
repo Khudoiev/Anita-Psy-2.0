@@ -37,7 +37,7 @@ services:
       DATABASE_URL: postgresql://anita_staging:${DB_PASSWORD_STAGING}@postgres:5432/anita_staging
       JWT_SECRET: ${JWT_SECRET_STAGING}
       GROK_API_KEY: ${GROK_API_KEY}
-      GROK_MODEL: ${GROK_MODEL:-grok-4-1-fast-non-reasoning}
+      GROK_MODEL: ${GROK_MODEL:-grok-4-1-fast-reasoning}
       DB_ENCRYPTION_KEY: ${DB_ENCRYPTION_KEY_STAGING}
       PORT: "4001"
       NODE_ENV: staging
