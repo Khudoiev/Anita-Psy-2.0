@@ -21,6 +21,10 @@ jobs:
             git fetch origin staging
             git reset --hard origin/staging
             git clean -fd
+            # Автоматически обновляем GROK_API_KEY на сервере
+            sed -i '/^GROK_API_KEY=/d' .env.staging.server || true
+            echo "GROK_API_KEY=${{ secrets.GROK_API_KEY }}" >> .env.staging.server
+            
             docker-compose -f infra/docker-compose.staging-server.yml --env-file .env.staging.server up -d --build --remove-orphans
             echo "Waiting for backend..."
             timeout 60 bash -c 'until docker exec anita-backend-staging-srv wget -qO- http://localhost:4001/api/health &>/dev/null; do sleep 2; done'
