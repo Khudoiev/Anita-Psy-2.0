@@ -32,6 +32,11 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await db.query(`
+    DELETE FROM admin_logs WHERE admin_id = (
+      SELECT id FROM admins WHERE username = 'inttest_admin_mod'
+    )
+  `);
   await db.query(`DELETE FROM admins WHERE username = 'inttest_admin_mod'`);
   await cleanIntegrationData();
 });
