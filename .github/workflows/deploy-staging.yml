@@ -17,6 +17,7 @@ jobs:
           key:      ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
           script: |
             cd /home/aleks90715/anita-psy-staging
+            sudo chown -R $(whoami):$(whoami) .git
             git fetch origin staging
             git reset --hard origin/staging
             git clean -fd
