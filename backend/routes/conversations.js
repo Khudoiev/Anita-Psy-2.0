@@ -214,7 +214,7 @@ router.post('/:id/generate-title', async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.GROK_MODEL || 'grok-4.1-fast-reasoning',
+        model: process.env.GROK_MODEL || 'grok-4-1-fast-reasoning',
         messages: [{
           role: 'user',
           content: `Придумай короткое название (3-5 слов, без кавычек) для психологической сессии: "${firstContent.slice(0, 150)}". Только название.`
@@ -265,7 +265,7 @@ router.post('/:id/end', async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.GROK_MODEL || 'grok-4.1-fast-reasoning',
+        model: process.env.GROK_MODEL || 'grok-4-1-fast-reasoning',
         messages: [
           { role: 'system', content: prompt },
           { role: 'user', content: 'Вот диалог:\n\n' + dialogText }
