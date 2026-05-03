@@ -68,7 +68,7 @@ router.post('/', requireAuth, async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.GROK_MODEL || 'grok-4-1-fast-reasoning',
+        model: 'Grok-4-1-Fast-Reasoning',
         messages: contextMessages,
         temperature: 0.9,
         top_p: 0.95,
@@ -158,7 +158,7 @@ router.post('/stream', requireAuth, async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.GROK_MODEL || 'grok-4-1-fast-reasoning',
+        model: 'Grok-4-1-Fast-Reasoning',
         messages: contextMessages,
         temperature: 0.9,
         max_tokens: 900,
@@ -231,7 +231,7 @@ router.post('/extract-memory', requireAuth, async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.GROK_MODEL || 'grok-4-1-fast-reasoning',
+        model: 'Grok-4-1-Fast-Reasoning',
         messages: [
           { role: 'system', content: MEMORY_EXTRACT_PROMPT },
           { role: 'user', content: 'Вот диалог:\n\n' + dialog },
