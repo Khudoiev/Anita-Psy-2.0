@@ -223,7 +223,8 @@ class AIService {
           if (parsed.error) throw new Error(parsed.error);
           if (parsed.token) onToken(parsed.token);
         } catch (e) {
-          if (e.message === 'AI_ERROR') throw e;
+          if (e.message && e.message.startsWith('AI_ERROR')) throw e;
+          // Ignore JSON parse errors for incomplete chunks
         }
       }
     }
