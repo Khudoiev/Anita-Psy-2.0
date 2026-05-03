@@ -12,13 +12,15 @@ function getHeaders() {
 async function apiCall(method, url, body = null) {
   const opts = { method, headers: getHeaders() };
   if (body) Object.assign(opts, { body: JSON.stringify(body) });
-  
+
   const res = await fetch(`${API_BASE}${url}`, opts);
   if (res.status === 401 || res.status === 403) {
     logout();
     throw new Error('Not authorized');
   }
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
 }
 
 const ui = {
@@ -160,15 +162,16 @@ async function loadInvites() {
 function renderUsers() {
   const q = document.getElementById('user-search').value.toLowerCase();
   ui.usersTable.innerHTML = '';
-  usersData.filter(u => 
-    (u.nickname && u.nickname.toLowerCase().includes(q)) || 
+  usersData.filter(u =>
+    (u.username && u.username.toLowerCase().includes(q)) ||
+    (u.nickname && u.nickname.toLowerCase().includes(q)) ||
     (u.inviteLabel && u.inviteLabel.toLowerCase().includes(q)) ||
     (u.ip && u.ip.includes(q))
   ).forEach(u => {
     const tr = document.createElement('tr');
     const flag = u.country_code ? `<img src="https://flagcdn.com/24x18/${u.country_code.toLowerCase()}.png" alt="${u.country}" style="vertical-align:middle;margin-right:5px; border-radius:2px">` : '🏳️';
     tr.innerHTML = `
-      <td><strong>${u.nickname || '—'}</strong></td>
+      <td><strong>${u.username || u.nickname || '—'}</strong></td>
       <td>${flag} ${u.country || 'Unknown'}</td>
       <td style="font-size:0.8rem; color:var(--text-muted)">${u.device_type} / ${u.browser}</td>
       <td><span style="font-size:0.8rem">${u.inviteLabel || '—'}</span></td>

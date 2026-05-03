@@ -195,7 +195,7 @@ router.get('/users', async (req, res) => {
   try {
     const query = `
       SELECT 
-        u.id, u.nickname, u.ip, u.country, u.country_code, u.city, u.device_type, u.browser,
+        u.id, u.nickname, u.username, u.ip, u.country, u.country_code, u.city, u.device_type, u.browser,
         u.first_seen as "firstSeen", u.last_seen as "lastSeen", u.is_blocked as "isBlocked",
         u.admin_note,
         i.label as "inviteLabel",
