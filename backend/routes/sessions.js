@@ -323,7 +323,7 @@ router.post('/users/:id/unban', async (req, res) => {
     const newToken = crypto.randomBytes(32).toString('hex');
     const inviteRes = await db.query(
       'INSERT INTO invites (token, label, max_uses) VALUES ($1, $2, 1) RETURNING id',
-      [newToken, label || 'Повторный доступ', 1]
+      [newToken, label || 'Повторный доступ']
     );
     const newInviteId = inviteRes.rows[0].id;
 
