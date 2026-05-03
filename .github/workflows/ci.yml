@@ -56,4 +56,3 @@ jobs:
         working-directory: backend
         env:
           GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
-          DB_ENCRYPTION_KEY: ci-test-encryption-key-32-chars-!!

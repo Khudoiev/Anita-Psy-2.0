@@ -9,7 +9,7 @@ if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < 32) {
 async function encryptText(plaintext) {
   if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < 32) return plaintext;
   const result = await db.query(
-    `SELECT pgp_sym_encrypt($1, $2) as encrypted`,
+    `SELECT encode(pgp_sym_encrypt($1, $2), 'base64') as encrypted`,
     [plaintext, ENCRYPTION_KEY]
   );
   return result.rows[0].encrypted;
@@ -19,7 +19,7 @@ async function decryptText(encrypted) {
   if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length < 32) return encrypted;
   try {
     const result = await db.query(
-      `SELECT pgp_sym_decrypt($1::bytea, $2) as decrypted`,
+      `SELECT pgp_sym_decrypt(decode($1, 'base64'), $2) as decrypted`,
       [encrypted, ENCRYPTION_KEY]
     );
     return result.rows[0].decrypted;

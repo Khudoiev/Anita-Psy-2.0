@@ -25,17 +25,22 @@ const requireAuth = async (req, res, next) => {
   req.user = decoded; // { userId, role } or { adminId, role }
 
   if (decoded.role === 'user') {
-    const result = await db.query(
-      `SELECT u.is_blocked,
-              u.invite_id,
-              EXISTS(SELECT 1 FROM invites i WHERE i.id = u.invite_id) as invite_exists,
-              EXISTS(
-                SELECT 1 FROM temp_bans tb
-                WHERE tb.user_id = u.id AND tb.unbanned_at IS NULL
-              ) as is_temp_banned
-       FROM users u WHERE u.id = $1`,
-      [decoded.userId]
-    );
+    let result;
+    try {
+      result = await db.query(
+        `SELECT u.is_blocked,
+                u.invite_id,
+                EXISTS(SELECT 1 FROM invites i WHERE i.id = u.invite_id) as invite_exists,
+                EXISTS(
+                  SELECT 1 FROM temp_bans tb
+                  WHERE tb.user_id = u.id AND tb.unbanned_at IS NULL
+                ) as is_temp_banned
+         FROM users u WHERE u.id = $1`,
+        [decoded.userId]
+      );
+    } catch (err) {
+      return next(err);
+    }
 
     if (result.rows.length === 0) {
       return res.status(401).json({ error: 'Пользователь не найден' });

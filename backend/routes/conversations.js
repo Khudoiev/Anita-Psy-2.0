@@ -41,6 +41,59 @@ router.post('/', async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════════════════════════════
+// MEMORY — must be defined BEFORE /:id to avoid Express matching
+// 'memory' as an id parameter
+// ══════════════════════════════════════════════════════════════
+
+// GET /api/conversations/memory
+router.get('/memory', async (req, res) => {
+  try {
+    const { getProfile } = require('../services/memoryService');
+    let profile;
+    try {
+      profile = await getProfile(req.user.userId);
+    } catch (e) {
+      console.warn('[GET /memory] getProfile failed, using defaults:', e.message);
+      profile = {};
+    }
+    res.json({
+      facts:           [],
+      themes:          profile?.themes        || [],
+      techniques:      profile?.techniques    || [],
+      name_hint:       profile?.name          || null,
+      mood_trajectory: profile?.mood_history?.at(-1)?.score || null,
+      is_onboarded:    profile?.is_onboarded  || false,
+    });
+  } catch (err) {
+    console.error('[GET /memory]', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// POST /api/conversations/memory
+router.post('/memory', async (req, res) => {
+  const { facts, themes, techniques, name_hint } = req.body;
+  try {
+    const { updateProfile, saveFacts } = require('../services/memoryService');
+
+    await updateProfile(req.user.userId, {
+      themes,
+      techniques,
+      name: name_hint
+    });
+
+    if (facts && facts.length) {
+      await saveFacts(req.user.userId, null, { facts });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[POST /memory]', err);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // GET /api/conversations/:id
 router.get('/:id', async (req, res) => {
   try {
@@ -266,60 +319,6 @@ router.post('/:id/insights', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[POST /:id/insights]', err);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
-});
-
-// ══════════════════════════════════════════════════════════════
-// MEMORY (moved from chats.js)
-// ══════════════════════════════════════════════════════════════
-
-// GET /api/conversations/memory
-router.get('/memory', async (req, res) => {
-  try {
-    const { getProfile } = require('../services/memoryService');
-    let profile;
-    try {
-      profile = await getProfile(req.user.userId);
-    } catch (e) {
-      console.warn('[GET /memory] getProfile failed, using defaults:', e.message);
-      profile = {};
-    }
-    res.json({
-      facts:           [],
-      themes:          profile?.themes        || [],
-      techniques:      profile?.techniques    || [],
-      name_hint:       profile?.name          || null,
-      mood_trajectory: profile?.mood_history?.at(-1)?.score || null,
-      is_onboarded:    profile?.is_onboarded  || false,
-    });
-  } catch (err) {
-    console.error('[GET /memory]', err);
-    res.status(500).json({ error: 'Ошибка сервера' });
-  }
-});
-
-// POST /api/conversations/memory
-router.post('/memory', async (req, res) => {
-  const { facts, themes, techniques, name_hint, mood_trajectory } = req.body;
-  try {
-    const { updateProfile, saveFacts } = require('../services/memoryService');
-    
-    // Сохраняем структурированные данные в профиль
-    await updateProfile(req.user.userId, {
-      themes,
-      techniques,
-      name: name_hint
-    });
-
-    // Если есть новые атомарные факты — сохраняем их в отдельные строки
-    if (facts && facts.length) {
-      await saveFacts(req.user.userId, null, { facts });
-    }
-
-    res.json({ success: true });
-  } catch (err) {
-    console.error('[POST /memory]', err);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
