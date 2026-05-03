@@ -34,7 +34,7 @@ async function parseProfileBackground(userId, messages) {
           'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'Grok-4-1-Fast-Reasoning',
+          model: process.env.GROK_MODEL || 'grok-4.20-reasoning',
           messages: [{ role: 'system', content: prompt }],
           temperature: 0.1,
           max_tokens: 200,
