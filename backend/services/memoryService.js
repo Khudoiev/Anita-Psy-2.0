@@ -1,10 +1,12 @@
 const db = require('../db');
 
 async function getUserMemoryContext(userId) {
+  const profile = await getProfile(userId);
+
   const result = await db.query(`
     SELECT fact, category, importance
     FROM user_memory
-    WHERE user_id=$1 AND is_active=true
+    WHERE user_id=$1 AND is_active=true AND fact != 'User Profile'
     ORDER BY
       CASE importance WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END,
       times_referenced DESC,
@@ -12,18 +14,26 @@ async function getUserMemoryContext(userId) {
     LIMIT 15
   `, [userId]);
 
-  if (!result.rows.length) return '';
+  const name = profile?.name || null;
+  const lastMood = profile?.mood_history?.at(-1)?.score ?? null;
+  const themes = profile?.themes?.length ? profile.themes.join(', ') : null;
+  const triggers = profile?.triggers?.length ? profile.triggers.join(', ') : null;
 
-  const byCategory = result.rows.reduce((acc, row) => {
-    if (!acc[row.category]) acc[row.category] = [];
-    acc[row.category].push(row.fact);
-    return acc;
-  }, {});
+  let context = '## ПАМЯТЬ О ЧЕЛОВЕКЕ\n\n';
+  context += `ИМЯ: ${name || 'не указано — спроси органично если возникнет момент'}\n`;
+  context += `ТЕМЫ ИЗ ПРОШЛЫХ РАЗГОВОРОВ: ${themes || 'нет'}\n`;
+  context += `ТРИГГЕРЫ: ${triggers || 'нет'}\n`;
+  context += `ПОСЛЕДНЕЕ НАСТРОЕНИЕ: ${lastMood !== null ? `${lastMood}/10` : 'нет данных'}\n`;
 
-  let context = 'КОНТЕКСТ О ПОЛЬЗОВАТЕЛЕ (из предыдущих сессий):\n';
-  for (const [cat, facts] of Object.entries(byCategory)) {
-    context += `[${cat}]: ${facts.join('; ')}\n`;
+  if (result.rows.length) {
+    context += 'ВАЖНЫЕ ФАКТЫ:\n';
+    result.rows.forEach(row => {
+      context += `- [${row.category}] ${row.fact}\n`;
+    });
+  } else {
+    context += 'ВАЖНЫЕ ФАКТЫ: нет\n';
   }
+
   return context;
 }
 

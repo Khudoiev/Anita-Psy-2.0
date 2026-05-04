@@ -870,10 +870,14 @@ class AnitaApp {
           })
           .then(r => r.json())
           .then(({ title }) => {
+            if (!title) return;
             const el = this.dom.sidebarChats.querySelector(
               `[data-conv-id="${this.currentChatId}"] .chat-item-title`
             );
-            if (el && title) el.textContent = title;
+            if (el) el.textContent = title;
+            const cache = this.storage.getChatsCache();
+            const chat = cache.find(c => c.id === this.currentChatId);
+            if (chat) chat.title = title;
           })
           .catch(() => {});
         }
@@ -952,7 +956,7 @@ class AnitaApp {
     const div = document.createElement('div');
     div.className = 'message anita';
     div.id = 'streaming-bubble';
-    div.innerHTML = `<div class="message-content" id="streaming-content"></div>
+    div.innerHTML = `<div class="bubble" id="streaming-content"></div>
                      <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>`;
     this.dom.chatArea.appendChild(div);
     this.streamBuffer = '';
@@ -989,7 +993,7 @@ class AnitaApp {
     const formatted = this.esc(content).replace(/\n/g, '<br>');
     
     bubble.innerHTML = `
-      <div class="message-content">${formatted}</div>
+      <div class="bubble">${formatted}</div>
       <div class="message-time">${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
     `;
     
@@ -1023,6 +1027,7 @@ class AnitaApp {
     chats.forEach(chat => {
       const el = document.createElement('div');
       el.className = `chat-item ${this.currentChatId === chat.id ? 'active' : ''}`;
+      el.setAttribute('data-conv-id', chat.id);
       el.innerHTML = `
         <div class="chat-item-title">${this.esc(chat.title || 'Новый разговор')}</div>
         <div class="chat-item-meta">${this.formatDate(chat.updated_at)}</div>

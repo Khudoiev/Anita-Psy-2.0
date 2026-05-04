@@ -59,7 +59,9 @@ router.post('/', requireAuth, async (req, res) => {
     parseProfileBackground(userId, messages).catch(e => console.error(e));
 
     const systemPrompt = await buildSystemPrompt(userId);
-    const contextMessages = await buildContextWindow(messages, systemPrompt, userId);
+    const sessionTurn = messages.filter(m => m.role === 'user').length;
+    const dynamicPrompt = `${systemPrompt}\n\n## ТЕКУЩИЙ КОНТЕКСТ СЕССИИ\nSESSION_TURN: ${sessionTurn}/30\n\nИспользуй этот номер чтобы понять, на каком этапе сессии находишься, и подбирай тон и глубину согласно блоку «ДИНАМИКА СЕССИИ».`;
+    const contextMessages = await buildContextWindow(messages, dynamicPrompt, userId);
 
     const response = await fetch(GROK_API_URL, {
       method: 'POST',
@@ -68,9 +70,9 @@ router.post('/', requireAuth, async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.GROK_MODEL || 'grok-4-1-fast-reasoning',
+        model: process.env.GROK_MODEL || 'grok-4.1-fast-reasoning',
         messages: contextMessages,
-        temperature: 0.9,
+        temperature: 0.80,
         top_p: 0.95,
         max_tokens: 1500,
       }),
@@ -142,9 +144,12 @@ router.post('/stream', requireAuth, async (req, res) => {
   // Background profile parsing (mood and onboarding)
   parseProfileBackground(userId, messages).catch(e => console.error(e));
 
+  const sessionTurn = messages.filter(m => m.role === 'user').length;
+  const dynamicPrompt = `${systemPrompt}\n\n## ТЕКУЩИЙ КОНТЕКСТ СЕССИИ\nSESSION_TURN: ${sessionTurn}/30\n\nИспользуй этот номер чтобы понять, на каком этапе сессии находишься, и подбирай тон и глубину согласно блоку «ДИНАМИКА СЕССИИ».`;
+
   let contextMessages;
   try {
-    contextMessages = await buildContextWindow(messages, systemPrompt, userId);
+    contextMessages = await buildContextWindow(messages, dynamicPrompt, userId);
   } catch (e) {
     console.error('[ContextWindow] failed:', e.message);
     res.write(`data: ${JSON.stringify({ error: 'SERVER_ERROR' })}\n\n`);
@@ -159,10 +164,11 @@ router.post('/stream', requireAuth, async (req, res) => {
         'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.GROK_MODEL || 'grok-4-1-fast-reasoning',
+        model: process.env.GROK_MODEL || 'grok-4.1-fast-reasoning',
         messages: contextMessages,
-        temperature: 0.9,
-        max_tokens: 900,
+        temperature: 0.80,
+        top_p: 0.95,
+        max_tokens: 1500,
         stream: true,
       }),
     });
