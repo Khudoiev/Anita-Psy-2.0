@@ -26,3 +26,6 @@ Thumbs.db
 .vscode/
 .idea/
 gh.zip
+
+# Local docs / notes
+docs/
