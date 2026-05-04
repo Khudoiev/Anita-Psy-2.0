@@ -538,6 +538,8 @@ class AnitaApp {
   // ══════════════════════════════════════════
   endSession() {
     if (!this.currentChatId) return;
+    const msgs = this.storage.getMessagesCache(this.currentChatId);
+    if (msgs.length >= 2) this.memory.learn(msgs).catch(console.warn);
     const btn = this.$('#end-session-btn');
     if (btn) btn.textContent = 'Анализирую...';
     
@@ -878,11 +880,12 @@ class AnitaApp {
             const cache = this.storage.getChatsCache();
             const chat = cache.find(c => c.id === this.currentChatId);
             if (chat) chat.title = title;
+            this.renderSidebar();
           })
           .catch(() => {});
         }
 
-        if (messages.length % 8 === 0) {
+        if (messages.length >= 4 && messages.length % 4 === 0) {
           this.memory.learn(messages).catch(console.warn);
         }
 
