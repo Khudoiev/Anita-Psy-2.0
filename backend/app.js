@@ -11,16 +11,21 @@ const Sentry  = require('@sentry/node');
 
 const app = express();
 
-// Sentry Init
+// Sentry Init (v10 API)
 if (process.env.SENTRY_DSN) {
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV || 'production',
     integrations: [
-      new Sentry.Integrations.Http({ tracing: true }),
-      new Sentry.Integrations.Express({ app }),
+      Sentry.httpIntegration(),
+      Sentry.expressIntegration(),
+      Sentry.postgresIntegration(),
+      Sentry.onUncaughtExceptionIntegration(),
+      Sentry.onUnhandledRejectionIntegration(),
     ],
-    tracesSampleRate: 0.2,
+    tracesSampleRate:   0.1,
+    profilesSampleRate: 0.1,
+    ignoreTransactions: ['/api/health', '/api/sessions/ping'],
   });
 }
 
@@ -35,11 +40,6 @@ const profileRoutes       = require('./routes/profile');
 const e2eHelperRoutes     = require('./routes/e2eHelper');
 const checkBlacklist      = require('./middleware/checkBlacklist');
 const requestLogger       = require('./middleware/requestLogger');
-
-if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.requestHandler());
-  app.use(Sentry.Handlers.tracingHandler());
-}
 
 app.use(requestLogger);
 app.set('trust proxy', 1);
@@ -104,7 +104,7 @@ app.get('*', (req, res) => {
 
 // Sentry Error Handler (must be after all controllers)
 if (process.env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.errorHandler());
+  Sentry.setupExpressErrorHandler(app);
 }
 
 // Global Error Handler
