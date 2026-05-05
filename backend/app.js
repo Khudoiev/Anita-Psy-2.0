@@ -11,6 +11,46 @@ const Sentry  = require('@sentry/node');
 
 const app = express();
 
+const helmet    = require('helmet');
+const rateLimit = require('express-rate-limit');
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'"],
+      styleSrc:   ["'self'", "'unsafe-inline'"],
+      imgSrc:     ["'self'", 'data:', 'blob:'],
+      connectSrc: ["'self'", 'https://api.x.ai'],
+      frameSrc:   ["'none'"],
+      objectSrc:  ["'none'"],
+    },
+  },
+  frameguard:     { action: 'deny' },
+  noSniff:        true,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  hsts: process.env.NODE_ENV === 'production'
+    ? { maxAge: 31536000, includeSubDomains: true }
+    : false,
+}));
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
+  message:         { error: 'Слишком много попыток. Попробуй через 15 минут.' },
+  standardHeaders: true,
+  legacyHeaders:   false,
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  message:         { error: 'Слишком много регистраций с этого IP.' },
+  standardHeaders: true,
+  legacyHeaders:   false,
+});
+
 // Sentry Init (v10 API)
 if (process.env.SENTRY_DSN) {
   Sentry.init({
@@ -80,6 +120,13 @@ app.use('/api', (req, res, next) => {
   checkBlacklist(req, res, next);
 });
 
+// Auth rate limiters — до регистрации роутов
+app.post('/api/auth/login',          authLimiter);
+app.post('/api/auth/admin/login',    authLimiter);
+app.post('/api/auth/register',       registerLimiter);
+app.post('/api/auth/reset-request',  authLimiter);
+app.post('/api/auth/reset-password', authLimiter);
+
 // Routes
 app.use('/api',               authRoutes);
 app.use('/api/sessions',      userSessionRoutes);
@@ -109,9 +156,14 @@ if (process.env.SENTRY_DSN) {
 
 // Global Error Handler
 app.use((err, req, res, _next) => {
-  const logger = require('./services/logger');
-  logger.error({ err, url: req.url, method: req.method }, 'Unhandled Error');
-  res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  const logger  = require('./services/logger');
+  const errorId = require('crypto').randomBytes(4).toString('hex');
+  logger.error({ err, url: req.url, method: req.method, errorId }, 'Unhandled Error');
+  const isDev = process.env.NODE_ENV !== 'production';
+  res.status(err.status || 500).json({
+    error:   isDev ? err.message : 'Внутренняя ошибка сервера',
+    errorId,
+  });
 });
 
 module.exports = app;

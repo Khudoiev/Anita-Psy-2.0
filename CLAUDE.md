@@ -339,6 +339,20 @@ Claude Code обязан проверить каждый пункт перед `
 - [ ] `cd backend && npm run lint:quick` — нет ESLint ошибок (no-undef, eqeqeq)
 - [ ] `cd backend && npm run test:contract` — все contract тесты зелёные
 - [ ] При изменении формата API-ответа — обновить схему в `schemas.js`
+- [ ] `cd backend && npm run test:security` — зелёные
+- [ ] При добавлении эндпоинта — проверить изоляцию данных между юзерами
+- [ ] При изменении auth middleware — security тесты обязательны
+
+---
+
+## 🔒 SECURITY — НЕ НАРУШАТЬ ПРИ ПРАВКАХ
+
+### 8. Security — не нарушать при правках
+
+- Helmet стоит ДО всех роутов в `app.js`
+- `authLimiter` на ВСЕХ `/api/auth/*` POST эндпоинтах
+- Заблокированный IP → 403 ДАЖЕ с валидным JWT (только admin JWT обходит)
+- Global error handler не возвращает `err.message` на проде
 
 ---
 
