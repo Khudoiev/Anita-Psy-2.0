@@ -21,6 +21,6 @@ exports.up = pgm => {
   pgm.sql('ALTER TABLE sessions ADD COLUMN IF NOT EXISTS started_at timestamp without time zone DEFAULT now()');
 };
 
-exports.down = pgm => {
+exports.down = _pgm => {
   // We don't drop columns in down to avoid data loss in this fix migration
 };

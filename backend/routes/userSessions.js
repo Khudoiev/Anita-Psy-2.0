@@ -9,7 +9,7 @@ const getGeoAndDevice = (req) => {
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '')
     .split(',')[0].trim().replace(/^::ffff:/, '');
   const geo = geoip.lookup(ip) || {};
-  const parser = new UAParser(req.headers['user-agent'] || '');
+  const _parser = new UAParser(req.headers['user-agent'] || '');
   return { ip, country: geo.country, country_code: geo.country, city: geo.city };
 };
 

@@ -108,7 +108,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 // Global Error Handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   const logger = require('./services/logger');
   logger.error({ err, url: req.url, method: req.method }, 'Unhandled Error');
   res.status(500).json({ error: 'Внутренняя ошибка сервера' });

@@ -137,6 +137,13 @@ getProfile() падает с 500 если колонка отсутствует
 Проверка: SELECT profile FROM user_memory LIMIT 0
 ```
 
+### 7. API контракт — legacy vs new routes
+
+Фронт (app.js) вызывает /api/conversations/*.
+Аудит (docs/audit/frontend-api-usage.md) фиксирует legacy /api/chats.
+При добавлении новых полей в API-ответ — ОБЯЗАТЕЛЬНО обновить schemas.js.
+Contract тест упадёт если бэк изменил формат без обновления схемы.
+
 ### 6. Sentry инициализация (backend/app.js)
 ```js
 // ✅ app создаётся ДО Sentry.init:
@@ -175,6 +182,29 @@ cd backend && npm run test:unit
 
 # Health check (можно запускать на живом сервере):
 cd backend && npm run test:health -- --env HEALTH_URL=http://34.140.213.8:8081
+```
+
+### Contract тесты
+
+```
+backend/__tests__/contract/
+├── schemas.js              ← JSON Schema каждого API-ответа
+└── api-contracts.test.js   ← тесты соответствия фронт ↔ бэк
+```
+
+```bash
+# Запуск:
+cd backend && npm run test:contract
+```
+
+### ESLint
+
+```bash
+# Быстрая проверка (только routes/ services/ middleware/):
+cd backend && npm run lint:quick
+
+# Полная проверка:
+cd backend && npm run lint
 ```
 
 ---
@@ -306,6 +336,9 @@ Claude Code обязан проверить каждый пункт перед `
 - [ ] Sentry инициализируется ПОСЛЕ `const app = express()`
 - [ ] `npm run test:e2e` — все E2E тесты зелёные на staging
 - [ ] При добавлении нового UI-флоу — добавлен E2E тест на этот флоу
+- [ ] `cd backend && npm run lint:quick` — нет ESLint ошибок (no-undef, eqeqeq)
+- [ ] `cd backend && npm run test:contract` — все contract тесты зелёные
+- [ ] При изменении формата API-ответа — обновить схему в `schemas.js`
 
 ---
 
