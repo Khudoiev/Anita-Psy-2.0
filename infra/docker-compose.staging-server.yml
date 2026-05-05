@@ -43,6 +43,7 @@ services:
       NODE_ENV: staging
       FRONTEND_URL: "http://34.140.213.8:8081"
       DAILY_MESSAGE_LIMIT: ${DAILY_MESSAGE_LIMIT:-50}
+      E2E_SECRET: ${E2E_SECRET}
     depends_on:
       postgres:
         condition: service_healthy

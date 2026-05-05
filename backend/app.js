@@ -32,6 +32,7 @@ const chatRoutes          = require('./routes/chat');
 const resetReqRoutes      = require('./routes/resetRequests');
 const conversationsRoutes = require('./routes/conversations');
 const profileRoutes       = require('./routes/profile');
+const e2eHelperRoutes     = require('./routes/e2eHelper');
 const checkBlacklist      = require('./middleware/checkBlacklist');
 const requestLogger       = require('./middleware/requestLogger');
 
@@ -68,6 +69,9 @@ app.get('/api/health', async (_req, res) => {
     res.status(503).json({ status: 'error', db: 'disconnected', error: err.message });
   }
 });
+
+// E2E helper — staging only, before blacklist
+app.use('/api/e2e', e2eHelperRoutes);
 
 // Blacklist middleware
 app.use('/api', (req, res, next) => {
