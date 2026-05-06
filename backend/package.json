@@ -14,8 +14,8 @@
     "test:ci": "jest --runInBand --forceExit --detectOpenHandles",
     "test:watch": "jest --watch --runInBand",
     "test:coverage": "jest --coverage --runInBand --forceExit",
-    "test:contract": "jest --runInBand --testPathPattern='contract/'",
-    "test:security": "jest --runInBand --testPathPattern='security/'",
+    "test:contract": "jest --runInBand --forceExit --testPathPattern='contract/'",
+    "test:security": "jest --runInBand --forceExit --testPathPattern='security/'",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
     "lint:quick": "eslint routes/ services/ middleware/ --ext .js"

@@ -7,6 +7,7 @@ const request = require('supertest');
 const app     = require('../../app');
 const db      = require('../../db');
 const crypto  = require('crypto');
+const { createTestUser } = require('../helpers/db');
 
 let validUserToken;
 let validAdminToken;
@@ -54,7 +55,6 @@ afterAll(async () => {
   await db.query(`DELETE FROM invites WHERE label    LIKE '${TEST_PREFIX}%'`);
   await db.query(`DELETE FROM ip_blacklist WHERE ip = $1`, [TEST_IP]);
   await db.query(`DELETE FROM admins WHERE username LIKE '${TEST_PREFIX}%'`);
-  await db.pool.end(); // Закрываем пул
 });
 
 // ─── 1. BLACKLIST ─────────────────────────────────────────────────────────
@@ -171,21 +171,9 @@ describe('Изоляция данных — юзер не читает чужи�
   let secondUserConvId;
 
   beforeAll(async () => {
-    const inviteToken = crypto.randomBytes(16).toString('hex');
-    await db.query(
-      `INSERT INTO invites (token, label, max_uses, is_active) VALUES ($1, $2, 5, true)`,
-      [inviteToken, `${TEST_PREFIX}invite2`]
-    );
-    const joinRes = await request(app).post('/api/auth/join').send({ token: inviteToken });
-    const guestToken = joinRes.body?.token;
-    const username2 = `${TEST_PREFIX}user2_${Date.now()}`;
-    await request(app)
-      .post('/api/auth/register')
-      .set('Authorization', `Bearer ${guestToken}`)
-      .send({ username: username2, password: 'SecTest456!', secretQuestion: 'q', secretAnswer: 'a' });
-    const loginRes2 = await request(app)
-      .post('/api/auth/login').send({ username: username2, password: 'SecTest456!' });
-    secondUserToken = loginRes2.body?.token;
+    // Используем прямые вставки в БД — не зависим от rate limiting HTTP-эндпоинтов
+    const user2 = await createTestUser();
+    secondUserToken = user2.token;
     const convRes = await request(app)
       .post('/api/conversations')
       .set('Authorization', `Bearer ${secondUserToken}`)

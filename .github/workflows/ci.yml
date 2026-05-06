@@ -30,6 +30,7 @@ jobs:
       DATABASE_URL: postgresql://anita:anita_test_secret@localhost:5432/anita_test
       JWT_SECRET: ci-test-jwt-secret-not-for-production
       NODE_ENV: test
+      SKIP_RATE_LIMIT: 'true'
       DAILY_MESSAGE_LIMIT: 100
       GROK_API_KEY: test-key-not-real
       DB_ENCRYPTION_KEY: ci-test-encryption-key-32-chars-!

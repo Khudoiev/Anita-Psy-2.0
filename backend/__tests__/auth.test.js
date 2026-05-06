@@ -23,8 +23,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // Закрываем пул соединений чтобы Jest не зависал
-  await db.pool.end();
+  // --forceExit завершит процесс и закроет пул
 });
 
 afterEach(async () => {
