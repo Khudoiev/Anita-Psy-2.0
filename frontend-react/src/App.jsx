@@ -2,10 +2,12 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 import AuthPage from './pages/AuthPage';
 import ChatPage from './pages/ChatPage';
+import AdminPage from './pages/AdminPage';
 
-function PrivateRoute({ children }) {
+function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuthStore();
-  return isAuthenticated() ? children : <Navigate to="/" replace />;
+  if (!isAuthenticated()) return <Navigate to="/" replace />;
+  return children;
 }
 
 export default function App() {
@@ -17,12 +19,12 @@ export default function App() {
         <Route
           path="/chat"
           element={
-            <PrivateRoute>
+            <ProtectedRoute>
               <ChatPage />
-            </PrivateRoute>
+            </ProtectedRoute>
           }
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/admin/*" element={<AdminPage />} />
       </Routes>
     </BrowserRouter>
   );

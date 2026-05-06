@@ -1,5 +1,6 @@
 async function registerNewUser(page, inviteToken, username, password = 'E2eTest123!') {
-  await page.goto(`/register?token=${inviteToken}`);
+  // React Router: AuthPage читает ?token= из SearchParams
+  await page.goto(`/?token=${inviteToken}`);
 
   await page.waitForSelector('input[name="username"], #username', { timeout: 10_000 });
 
@@ -16,15 +17,17 @@ async function registerNewUser(page, inviteToken, username, password = 'E2eTest1
 
   await page.locator('button[type="submit"], #register-btn').first().click();
 
-  await page.waitForURL(/\/(index\.html)?(\?|$|#)/, { timeout: 15_000 });
+  // React Router redirect: / → /chat после успешной регистрации
+  await page.waitForURL(/\/chat/, { timeout: 15_000 });
 }
 
 async function loginExistingUser(page, username, password = 'E2eTest123!') {
-  await page.goto('/auth.html');
+  // React Router: AuthPage теперь на /
+  await page.goto('/');
   await page.locator('input[name="username"], #login-username').first().fill(username);
   await page.locator('input[name="password"], #login-password').first().fill(password);
   await page.locator('button[type="submit"], #login-btn').first().click();
-  await page.waitForURL(/\/(index\.html)?(\?|$|#)/, { timeout: 15_000 });
+  await page.waitForURL(/\/chat/, { timeout: 15_000 });
 }
 
 module.exports = { registerNewUser, loginExistingUser };
