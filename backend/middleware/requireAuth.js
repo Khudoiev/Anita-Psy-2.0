@@ -76,10 +76,31 @@ const requireAdmin = async (req, res, next) => {
     return next();
   }
 
-  await requireAuth(req, res, () => {
+  await requireAuth(req, res, async () => {
+    // 1. JWT должен иметь role === 'admin'
     if (req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Требуются права администратора' });
     }
+
+    // 2. ФИКС: adminId должен реально существовать в таблице admins.
+    //    Защищает от эскалации: user JWT с role:'admin' не проходит,
+    //    т.к. userId не является записью в таблице admins.
+    if (!req.user.adminId) {
+      return res.status(403).json({ error: 'Требуются права администратора' });
+    }
+
+    try {
+      const result = await db.query(
+        'SELECT id FROM admins WHERE id = $1',
+        [req.user.adminId]
+      );
+      if (!result.rows.length) {
+        return res.status(403).json({ error: 'Требуются права администратора' });
+      }
+    } catch (err) {
+      return next(err);
+    }
+
     next();
   });
 };
