@@ -9,11 +9,14 @@ const db      = require('../../db');
 const crypto  = require('crypto');
 
 let validUserToken;
+let validAdminToken;
 let testUserId;
+let testAdminId;
 const TEST_IP     = '10.99.99.99';
 const TEST_PREFIX = 'sec_test_';
 
 beforeAll(async () => {
+  // --- Create User ---
   const inviteToken = crypto.randomBytes(16).toString('hex');
   await db.query(
     `INSERT INTO invites (token, label, max_uses, is_active) VALUES ($1, $2, 10, true)`,
@@ -31,12 +34,26 @@ beforeAll(async () => {
   validUserToken = loginRes.body?.token;
   const userRes  = await db.query('SELECT id FROM users WHERE username = $1', [username]);
   testUserId = userRes.rows[0]?.id;
+
+  // --- Create Admin ---
+  const adminUsername = `${TEST_PREFIX}admin_${Date.now()}`;
+  const adminRes = await db.query(
+    `INSERT INTO admins (username, password_hash) VALUES ($1, 'fake_hash') RETURNING id`,
+    [adminUsername]
+  );
+  testAdminId = adminRes.rows[0].id;
+  const jwt = require('jsonwebtoken');
+  validAdminToken = jwt.sign(
+    { adminId: testAdminId, role: 'admin' },
+    process.env.JWT_SECRET
+  );
 });
 
 afterAll(async () => {
   await db.query(`DELETE FROM users  WHERE username LIKE '${TEST_PREFIX}%'`);
   await db.query(`DELETE FROM invites WHERE label    LIKE '${TEST_PREFIX}%'`);
   await db.query(`DELETE FROM ip_blacklist WHERE ip = $1`, [TEST_IP]);
+  await db.query(`DELETE FROM admins WHERE username LIKE '${TEST_PREFIX}%'`);
 });
 
 // ─── 1. BLACKLIST ─────────────────────────────────────────────────────────

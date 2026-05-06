@@ -61,7 +61,7 @@ const requireAuth = async (req, res, next) => {
   next();
 };
 
-const requireAdmin = async (req, res, next) => {
+const requireAdmin = (req, res, next) => {
   const adminIp = process.env.ADMIN_IP;
   // Получаем IP клиента (с учетом прокси)
   const clientIp = req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress;
@@ -76,9 +76,11 @@ const requireAdmin = async (req, res, next) => {
     return next();
   }
 
-  await requireAuth(req, res, async () => {
+  requireAuth(req, res, async (err) => {
+    if (err) return next(err);
+
     // 1. JWT должен иметь role === 'admin'
-    if (req.user.role !== 'admin') {
+    if (!req.user || req.user.role !== 'admin') {
       return res.status(403).json({ error: 'Требуются права администратора' });
     }
 
@@ -97,11 +99,10 @@ const requireAdmin = async (req, res, next) => {
       if (!result.rows.length) {
         return res.status(403).json({ error: 'Требуются права администратора' });
       }
-    } catch (err) {
-      return next(err);
+      next();
+    } catch (dbErr) {
+      return next(dbErr);
     }
-
-    next();
   });
 };
 
