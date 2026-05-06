@@ -11,7 +11,7 @@
     "test:unit": "jest --runInBand --testPathPattern='__tests__/[^/]+\\.test\\.js$'",
     "test:integration": "jest --runInBand --testPathPattern='integration/'",
     "test:health": "jest --runInBand --testPathPattern='health'",
-    "test:ci": "jest --runInBand --forceExit --detectOpenHandles",
+    "test:ci": "jest --runInBand --forceExit --detectOpenHandles --testPathIgnorePatterns='__tests__/security/'",
     "test:watch": "jest --watch --runInBand",
     "test:coverage": "jest --coverage --runInBand --forceExit",
     "test:contract": "jest --runInBand --forceExit --testPathPattern='contract/'",

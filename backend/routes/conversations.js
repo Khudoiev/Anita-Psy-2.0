@@ -139,10 +139,11 @@ router.patch('/:id/title', async (req, res) => {
 // DELETE /api/conversations/:id  (soft delete)
 router.delete('/:id', async (req, res) => {
   try {
-    await db.query(
+    const result = await db.query(
       'UPDATE conversations SET is_archived=true WHERE id=$1 AND user_id=$2',
       [req.params.id, req.user.userId]
     );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Разговор не найден' });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Ошибка сервера' });
