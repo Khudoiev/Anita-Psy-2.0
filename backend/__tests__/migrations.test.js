@@ -8,6 +8,10 @@ require('dotenv').config();
 
 const db = require('../db');
 
+afterAll(async () => {
+  await db.pool.end();
+});
+
 // Список таблиц которые должны существовать после baseline миграции
 const EXPECTED_TABLES = [
   'admins',

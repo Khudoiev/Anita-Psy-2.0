@@ -7,7 +7,7 @@
 
 require('dotenv').config({ path: require('path').join(__dirname, '../../../.env.local') });
 require('dotenv').config();
-process.env.JWT_SECRET        = process.env.JWT_SECRET        || 'test-jwt-secret';
+process.env.JWT_SECRET        = process.env.JWT_SECRET        || 'test-jwt-secret-for-testing';
 process.env.DB_ENCRYPTION_KEY = process.env.DB_ENCRYPTION_KEY || 'test-encryption-key-32-chars!!';
 
 const request = require('supertest');

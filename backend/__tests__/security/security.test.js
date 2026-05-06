@@ -1,6 +1,8 @@
 require('dotenv').config({ path: require('path').join(__dirname, '../../../.env.local') });
 require('dotenv').config();
-process.env.JWT_SECRET        = process.env.JWT_SECRET        || 'test-jwt-secret';
+
+
+process.env.JWT_SECRET        = process.env.JWT_SECRET        || 'test-jwt-secret-for-testing';
 process.env.DB_ENCRYPTION_KEY = process.env.DB_ENCRYPTION_KEY || 'test-key-32-chars-exactly-here!!';
 
 const request = require('supertest');
@@ -173,6 +175,15 @@ describe('Изоляция данных — юзер не читает чужи�
     const res = await request(app)
       .get(`/api/conversations/${secondUserConvId}`)
       .set('Authorization', `Bearer ${validUserToken}`);
+    
+    if (res.status === 401) {
+      console.error('DEBUG: 401 on read test');
+      const decoded = require('jsonwebtoken').decode(validUserToken);
+      console.error('Decoded userId:', decoded?.userId);
+      const dbUser = await db.query('SELECT id FROM users WHERE id = $1', [decoded?.userId]);
+      console.error('User in DB:', dbUser.rows.length > 0 ? 'exists' : 'NOT FOUND');
+    }
+
     expect(res.status).not.toBe(200);
     expect([403, 404]).toContain(res.status);
   });

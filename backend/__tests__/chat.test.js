@@ -28,6 +28,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   jest.restoreAllMocks();
+  await db.pool.end();
 });
 
 beforeEach(async () => {

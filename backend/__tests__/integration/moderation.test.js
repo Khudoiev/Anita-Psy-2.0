@@ -18,7 +18,7 @@ beforeAll(async () => {
   );
   adminToken = jwt.sign(
     { adminId: adminRes.rows[0].id, role: 'admin' },
-    process.env.JWT_SECRET || 'test-jwt-secret',
+    process.env.JWT_SECRET || 'test-jwt-secret-for-testing',
     { expiresIn: '1h' }
   );
 

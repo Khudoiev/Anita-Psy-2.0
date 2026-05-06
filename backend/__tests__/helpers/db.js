@@ -84,7 +84,7 @@ async function createTestUser(opts = {}) {
 
   const token = jwt.sign(
     { userId, role: 'user', registered: !!opts.registered },
-    process.env.JWT_SECRET || 'test-jwt-secret',
+    process.env.JWT_SECRET || 'test-jwt-secret-for-testing',
     { expiresIn: '1h' }
   );
 
