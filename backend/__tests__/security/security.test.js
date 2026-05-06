@@ -54,6 +54,7 @@ afterAll(async () => {
   await db.query(`DELETE FROM invites WHERE label    LIKE '${TEST_PREFIX}%'`);
   await db.query(`DELETE FROM ip_blacklist WHERE ip = $1`, [TEST_IP]);
   await db.query(`DELETE FROM admins WHERE username LIKE '${TEST_PREFIX}%'`);
+  await db.pool.end(); // Закрываем пул
 });
 
 // ─── 1. BLACKLIST ─────────────────────────────────────────────────────────

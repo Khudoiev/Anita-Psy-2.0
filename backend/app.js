@@ -41,6 +41,7 @@ const authLimiter = rateLimit({
   message:         { error: 'Слишком много попыток. Попробуй через 15 минут.' },
   standardHeaders: true,
   legacyHeaders:   false,
+  skip: () => process.env.NODE_ENV === 'test', // ПРОПУСКАЕМ В ТЕСТАХ
 });
 
 const registerLimiter = rateLimit({
@@ -49,6 +50,7 @@ const registerLimiter = rateLimit({
   message:         { error: 'Слишком много регистраций с этого IP.' },
   standardHeaders: true,
   legacyHeaders:   false,
+  skip: () => process.env.NODE_ENV === 'test', // ПРОПУСКАЕМ В ТЕСТАХ
 });
 
 // Sentry Init (v10 API)

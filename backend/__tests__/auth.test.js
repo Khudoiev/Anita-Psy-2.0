@@ -24,8 +24,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   // Закрываем пул соединений чтобы Jest не зависал
-  await db.query('SELECT 1'); // убеждаемся что пул жив
-  // pg Pool не экспортирован напрямую, завершение произойдёт по таймауту
+  await db.pool.end();
 });
 
 afterEach(async () => {

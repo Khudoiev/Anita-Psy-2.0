@@ -63,6 +63,7 @@ afterAll(async () => {
   await db.query(
     `DELETE FROM invites WHERE label LIKE '${TEST_PREFIX}%'`
   );
+  await db.pool.end(); // Закрываем пул
 });
 
 // ─── AUTH контракты ────────────────────────────────────────────────────────

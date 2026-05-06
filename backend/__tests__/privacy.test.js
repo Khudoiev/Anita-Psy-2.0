@@ -13,7 +13,10 @@ const { cleanDatabase, createTestUser } = require('./helpers/db');
 const db = require('../db');
 
 beforeAll(async () => { await cleanDatabase(); });
-afterAll(async () => { jest.restoreAllMocks(); });
+afterAll(async () => { 
+  jest.restoreAllMocks(); 
+  await db.pool.end();
+});
 afterEach(async () => { await cleanDatabase(); });
 
 // ─────────────────────────────────────────────────────────────
