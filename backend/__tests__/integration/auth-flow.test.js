@@ -1,8 +1,11 @@
 const { cleanIntegrationData, createTestInvite, joinWithInvite,
-        registerUser, loginUser, request, app } = require('./helpers');
+        registerUser, loginUser, request, app, db } = require('./helpers');
 
 beforeAll(async () => { await cleanIntegrationData(); });
-afterAll(async ()  => { await cleanIntegrationData(); });
+afterAll(async ()  => { 
+  await cleanIntegrationData(); 
+  await db.pool.end();
+});
 
 describe('Критический путь 1: Авторизация и имя', () => {
 

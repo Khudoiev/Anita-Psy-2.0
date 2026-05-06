@@ -39,6 +39,7 @@ afterAll(async () => {
   `);
   await db.query(`DELETE FROM admins WHERE username = 'inttest_admin_mod'`);
   await cleanIntegrationData();
+  await db.pool.end();
 });
 
 // ─────────────────────────────────────────────────────────────

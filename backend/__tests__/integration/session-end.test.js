@@ -1,5 +1,5 @@
 const { cleanIntegrationData, createTestInvite, joinWithInvite,
-        registerUser, loginUser, request, app } = require('./helpers');
+        registerUser, loginUser, request, app, db } = require('./helpers');
 
 let userToken;
 let conversationId;
@@ -28,7 +28,10 @@ beforeAll(async () => {
   }
 });
 
-afterAll(async () => { await cleanIntegrationData(); });
+afterAll(async () => { 
+  await cleanIntegrationData(); 
+  await db.pool.end();
+});
 
 describe('Критический путь 4: Завершение сеанса', () => {
 

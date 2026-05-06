@@ -15,7 +15,7 @@ const db = require('../db');
 beforeAll(async () => { await cleanDatabase(); });
 afterAll(async () => { 
   jest.restoreAllMocks();
-  // --forceExit завершит процесс
+  await db.pool.end();
 });
 afterEach(async () => { await cleanDatabase(); });
 

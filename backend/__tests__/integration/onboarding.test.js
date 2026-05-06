@@ -12,7 +12,10 @@ beforeAll(async () => {
   userToken = loginRes.body.token;
 });
 
-afterAll(async () => { await cleanIntegrationData(); });
+afterAll(async () => { 
+  await cleanIntegrationData(); 
+  await db.pool.end();
+});
 
 describe('Критический путь 5: Онбординг нового пользователя', () => {
 

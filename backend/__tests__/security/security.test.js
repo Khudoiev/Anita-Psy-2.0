@@ -16,25 +16,15 @@ let testAdminId;
 const TEST_IP     = '10.99.99.99';
 const TEST_PREFIX = 'sec_test_';
 
+afterAll(async () => {
+  await db.pool.end();
+});
+
 beforeAll(async () => {
-  // --- Create User ---
-  const inviteToken = crypto.randomBytes(16).toString('hex');
-  await db.query(
-    `INSERT INTO invites (token, label, max_uses, is_active) VALUES ($1, $2, 10, true)`,
-    [inviteToken, `${TEST_PREFIX}invite`]
-  );
-  const joinRes  = await request(app).post('/api/auth/join').send({ token: inviteToken });
-  const guestToken = joinRes.body?.token;
-  const username = `${TEST_PREFIX}user_${Date.now()}`;
-  await request(app)
-    .post('/api/auth/register')
-    .set('Authorization', `Bearer ${guestToken}`)
-    .send({ username, password: 'SecTest123!', secretQuestion: 'q', secretAnswer: 'a' });
-  const loginRes = await request(app)
-    .post('/api/auth/login').send({ username, password: 'SecTest123!' });
-  validUserToken = loginRes.body?.token;
-  const userRes  = await db.query('SELECT id FROM users WHERE username = $1', [username]);
-  testUserId = userRes.rows[0]?.id;
+  // --- Create User (Direct DB) ---
+  const user = await createTestUser();
+  validUserToken = user.token;
+  testUserId     = user.id;
 
   // --- Create Admin ---
   const adminUsername = `${TEST_PREFIX}admin_${Date.now()}`;
@@ -55,6 +45,7 @@ afterAll(async () => {
   await db.query(`DELETE FROM invites WHERE label    LIKE '${TEST_PREFIX}%'`);
   await db.query(`DELETE FROM ip_blacklist WHERE ip = $1`, [TEST_IP]);
   await db.query(`DELETE FROM admins WHERE username LIKE '${TEST_PREFIX}%'`);
+  await db.pool.end();
 });
 
 // ─── 1. BLACKLIST ─────────────────────────────────────────────────────────

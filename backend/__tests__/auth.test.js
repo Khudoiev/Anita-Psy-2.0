@@ -23,7 +23,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // --forceExit завершит процесс и закроет пул
+  await db.pool.end();
 });
 
 afterEach(async () => {

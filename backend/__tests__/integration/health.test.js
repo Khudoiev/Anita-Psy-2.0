@@ -1,5 +1,9 @@
 const { request, app, db } = require('./helpers');
 
+afterAll(async () => {
+  await db.pool.end();
+});
+
 describe('Deep Health Check — инфраструктура', () => {
 
   test('pgcrypto extension активна', async () => {
