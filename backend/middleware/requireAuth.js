@@ -91,6 +91,11 @@ const requireAdmin = (req, res, next) => {
       return res.status(403).json({ error: 'Требуются права администратора' });
     }
 
+    // Если это системный ID (IP-байпасс), пропускаем проверку БД
+    if (req.user.adminId === '00000000-0000-0000-0000-000000000000') {
+      return next();
+    }
+
     try {
       const result = await db.query(
         'SELECT id FROM admins WHERE id = $1',
