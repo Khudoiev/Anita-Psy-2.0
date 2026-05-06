@@ -35,3 +35,4 @@ docs/
 tests/e2e/env.e2e
 tests/e2e-report/
 test-results/
+frontend-build/
