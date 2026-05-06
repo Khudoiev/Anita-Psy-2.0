@@ -16,9 +16,6 @@ let testAdminId;
 const TEST_IP     = '10.99.99.99';
 const TEST_PREFIX = 'sec_test_';
 
-afterAll(async () => {
-  await db.pool.end();
-});
 
 beforeAll(async () => {
   // --- Create User (Direct DB) ---
