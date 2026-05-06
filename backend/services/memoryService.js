@@ -72,7 +72,8 @@ const defaultProfile = {
   insights_history: [],
   themes: [],
   techniques: [],
-  is_onboarded: false
+  is_onboarded: false,
+  session_summaries: [],
 };
 
 async function getProfile(userId) {
@@ -121,4 +122,22 @@ async function updateProfile(userId, updates) {
   return newProfile;
 }
 
-module.exports = { getUserMemoryContext, saveFacts, touchMemoryFacts, getProfile, updateProfile };
+async function saveSessionSummary(userId, { theme, key_moment }) {
+  if (!theme && !key_moment) return;
+
+  const profile = await getProfile(userId);
+  const summaries = Array.isArray(profile.session_summaries) ? profile.session_summaries : [];
+
+  const updated = [
+    ...summaries.slice(-4),
+    {
+      date: new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }),
+      theme: theme || 'не определена',
+      key_moment: key_moment || 'не определён',
+    },
+  ];
+
+  await updateProfile(userId, { session_summaries: updated });
+}
+
+module.exports = { getUserMemoryContext, saveFacts, touchMemoryFacts, getProfile, updateProfile, saveSessionSummary };

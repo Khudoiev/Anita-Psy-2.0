@@ -296,6 +296,44 @@ router.post('/:id/end', async (req, res) => {
       }
     }
 
+    // Генерируем краткое резюме сессии для памяти следующей сессии
+    try {
+      const summaryPrompt = `Проанализируй диалог и выдели ОДНУ главную тему и ОДИН ключевой момент.
+Верни ТОЛЬКО JSON без markdown:
+{
+  "theme": "одна главная тема сессии в 3-7 словах",
+  "key_moment": "самое важное что сказал или понял человек, одно предложение"
+}`;
+
+      const summaryResponse = await fetch(GROK_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.GROK_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: process.env.GROK_MODEL || 'grok-4-1-fast-reasoning',
+          messages: [
+            { role: 'system', content: summaryPrompt },
+            { role: 'user', content: 'Диалог:\n\n' + dialogText },
+          ],
+          temperature: 0.3,
+          max_tokens: 150,
+        }),
+      });
+
+      if (summaryResponse.ok) {
+        const summaryData = await summaryResponse.json();
+        const summaryContent = summaryData.choices?.[0]?.message?.content || '';
+        const summaryClean = summaryContent.replace(/```json/g, '').replace(/```/g, '').trim();
+        const summary = JSON.parse(summaryClean);
+        const { saveSessionSummary } = require('../services/memoryService');
+        await saveSessionSummary(req.user.userId, summary);
+      }
+    } catch (summaryErr) {
+      console.warn('[Session summary generation failed]', summaryErr.message);
+    }
+
     // Add date to insights before sending
     const dateStr = new Date().toISOString();
     const insightsWithDate = (parsed.insights || []).map(i => ({ ...i, date: dateStr }));

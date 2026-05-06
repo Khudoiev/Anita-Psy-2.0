@@ -16,21 +16,35 @@ async function buildContextWindow(messages, systemPrompt, userId) {
     budget -= msgTokens;
   }
 
+  const sessionTurn = messages.filter(m => m.role === 'user').length;
+
   let profileBlock = '';
   if (userId) {
     const profile = await getProfile(userId);
     const sessionsCountResult = await db.query('SELECT count(*) FROM conversations WHERE user_id = $1', [userId]);
     const sessionsCount = parseInt(sessionsCountResult.rows[0].count, 10);
+    const isReturning = sessionsCount > 1;
+
+    let lastSessionSummary = '';
+    if (isReturning && profile.session_summaries?.length > 0) {
+      const last = profile.session_summaries[profile.session_summaries.length - 1];
+      lastSessionSummary = `\nПОСЛЕДНЯЯ СЕССИЯ (${last.date}):\n  Тема: ${last.theme}\n  Ключевой момент: ${last.key_moment}`;
+    }
 
     if (profile) {
-      profileBlock = `ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ:\n` +
-        `Статус онбординга: ${profile.is_onboarded ? 'ЗАВЕРШЕН' : 'НЕ ЗАВЕРШЕН'}\n` +
-        `Всего сессий: ${sessionsCount}\n` +
+      profileBlock =
+        `SESSION_TURN: ${sessionTurn}\n` +
+        `ВСЕГО СЕССИЙ: ${sessionsCount}\n` +
+        `ПОВТОРНЫЙ ВИЗИТ: ${isReturning ? 'ДА' : 'НЕТ (первая сессия)'}\n` +
+        `---\n` +
+        `ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ:\n` +
         `Имя: ${profile.name || 'не указано'}\n` +
         `Основные проблемы: ${profile.core_issues?.join(', ') || 'нет'}\n` +
         `Триггеры: ${profile.triggers?.join(', ') || 'нет'}\n` +
         `Прогресс: ${profile.progress || 'нет'}\n` +
-        `Предпочитаемые техники: ${profile.preferred_techniques?.join(', ') || 'нет'}`;
+        `Предпочитаемые техники: ${profile.preferred_techniques?.join(', ') || 'нет'}\n` +
+        `Последнее настроение: ${profile.mood_history?.at(-1)?.score ?? 'нет данных'}/10` +
+        lastSessionSummary;
     }
   }
 
