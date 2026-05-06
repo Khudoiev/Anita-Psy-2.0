@@ -345,6 +345,10 @@ document.querySelectorAll('.close-modal-btn').forEach(b => b.addEventListener('c
   e.target.closest('.modal').classList.remove('open');
 }));
 
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => {
+  if (e.target === m) m.classList.remove('open');
+}));
+
 document.getElementById('create-invite-btn').addEventListener('click', () => {
   document.getElementById('new-invite-link-container').style.display = 'none';
   ui.inviteModal.classList.add('open');
