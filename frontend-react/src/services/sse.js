@@ -45,12 +45,19 @@ export async function streamChat(conversationId, userMessage, onError) {
           const data = line.slice(6).trim();
           if (data === '[DONE]') {
             store.finishStreaming();
+            const assistantContent = useChatStore.getState().messages.at(-1)?.content;
+            if (assistantContent) {
+              await api.saveMessage(conversationId, 'assistant', assistantContent)
+                .catch(e => console.warn('[Save assistant msg]', e));
+            }
             return;
           }
           try {
             const parsed = JSON.parse(data);
-            if (parsed.content) {
-              store.appendToStream(parsed.content);
+            const streamText = parsed.content ?? parsed.token ?? null;
+            if (streamText) {
+              store.appendToStream(streamText);
+              continue;
             }
           } catch (e) {
             console.warn('Parse error:', e);

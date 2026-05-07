@@ -21,6 +21,7 @@ export default function ChatArea() {
 
   useEffect(() => {
     if (!currentConversationId) return;
+    if (isStreaming) return;
     loadMessages();
   }, [currentConversationId]);
 

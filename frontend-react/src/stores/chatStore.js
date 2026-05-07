@@ -22,23 +22,23 @@ export const useChatStore = create((set, get) => ({
     set((state) => ({ streamingMessage: state.streamingMessage + chunk })),
 
   finishStreaming: () => {
-    const { streamingMessage, messages } = get();
-    if (streamingMessage.trim()) {
-      set({
-        messages: [
-          ...messages,
-          {
-            role: 'assistant',
-            content: streamingMessage.trim(),
-            created_at: new Date().toISOString(),
-          },
-        ],
-        isStreaming: false,
-        streamingMessage: '',
-      });
-    } else {
+    const { streamingMessage } = get();
+    if (!streamingMessage.trim()) {
       set({ isStreaming: false, streamingMessage: '' });
+      return;
     }
+    set((state) => ({
+      messages: [
+        ...state.messages,
+        {
+          role: 'assistant',
+          content: streamingMessage.trim(),
+          created_at: new Date().toISOString(),
+        },
+      ],
+      isStreaming: false,
+      streamingMessage: '',
+    }));
   },
 
   clearStream: () => set({ isStreaming: false, streamingMessage: '' }),

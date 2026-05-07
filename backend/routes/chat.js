@@ -62,6 +62,7 @@ router.post('/', requireAuth, async (req, res) => {
     const sessionTurn = messages.filter(m => m.role === 'user').length;
     const dynamicPrompt = `${systemPrompt}\n\n## ТЕКУЩИЙ КОНТЕКСТ СЕССИИ\nSESSION_TURN: ${sessionTurn}/30\n\nИспользуй этот номер чтобы понять, на каком этапе сессии находишься, и подбирай тон и глубину согласно блоку «ДИНАМИКА СЕССИИ».`;
     const contextMessages = await buildContextWindow(messages, dynamicPrompt, userId);
+    console.log(`[SESSION_TURN] user=${userId} turn=${sessionTurn} model=grok`);
 
     const response = await fetch(GROK_API_URL, {
       method: 'POST',
@@ -150,6 +151,7 @@ router.post('/stream', requireAuth, async (req, res) => {
   let contextMessages;
   try {
     contextMessages = await buildContextWindow(messages, dynamicPrompt, userId);
+    console.log(`[SESSION_TURN] user=${userId} turn=${sessionTurn} model=grok`);
   } catch (e) {
     console.error('[ContextWindow] failed:', e.message);
     res.write(`data: ${JSON.stringify({ error: 'SERVER_ERROR' })}\n\n`);
