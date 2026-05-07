@@ -109,6 +109,9 @@ router.post('/stream', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Неверный формат сообщений' });
   }
 
+  console.log('[STREAM] incoming messages count:', messages.length);
+  console.log('[STREAM] last message:', messages[messages.length - 1]);
+
   const userId = req.user.userId;
 
   try {
