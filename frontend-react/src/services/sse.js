@@ -16,6 +16,7 @@ export async function streamChat(conversationId, userMessage, onError) {
     await api.saveMessage(conversationId, 'user', userMessage);
 
     const token = useAuthStore.getState().token;
+    const allMessages = useChatStore.getState().messages.map(({ role, content }) => ({ role, content }));
     const response = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: {
@@ -24,7 +25,7 @@ export async function streamChat(conversationId, userMessage, onError) {
       },
       body: JSON.stringify({
         conversationId,
-        message: userMessage,
+        messages: allMessages,
       }),
     });
 
