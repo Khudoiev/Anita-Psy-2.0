@@ -18,7 +18,12 @@ router.use((req, res, next) => {
 // POST /api/e2e/cleanup — удаляет всех e2e_ юзеров и инвайты
 router.post('/cleanup', async (req, res) => {
   try {
-    await db.query(`DELETE FROM users WHERE username LIKE 'e2e_%' OR nickname LIKE 'e2e_%'`);
+    const e2eUsers = await db.query(`SELECT id FROM users WHERE username LIKE 'e2e_%' OR nickname LIKE 'e2e_%'`);
+    const ids = e2eUsers.rows.map(r => r.id);
+    if (ids.length > 0) {
+      await db.query(`DELETE FROM message_quota WHERE user_id = ANY($1)`, [ids]);
+      await db.query(`DELETE FROM users WHERE id = ANY($1)`, [ids]);
+    }
     await db.query(`DELETE FROM invites WHERE label LIKE 'e2e_%'`);
     res.json({ success: true });
   } catch (err) {

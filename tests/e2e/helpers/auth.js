@@ -2,10 +2,11 @@ async function registerNewUser(page, inviteToken, username, password = 'E2eTest1
   // React Router: AuthPage читает ?token= из SearchParams
   await page.goto(`/?token=${inviteToken}`);
 
-  await page.waitForSelector('input[name="username"], #username', { timeout: 10_000 });
+  // Wait for RegisterForm specifically — #username only exists in RegisterForm, not LoginForm
+  await page.waitForSelector('#username', { timeout: 10_000 });
 
-  const usernameInput = page.locator('input[name="username"], #username').first();
-  const passwordInput = page.locator('input[name="password"], #password').first();
+  const usernameInput = page.locator('#username');
+  const passwordInput = page.locator('#password');
   await usernameInput.fill(username);
   await passwordInput.fill(password);
 

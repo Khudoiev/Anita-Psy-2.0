@@ -52,7 +52,7 @@ test.describe('Auth Flow — регистрация, логин, имя', () => 
     page.on('dialog', d => d.accept());
     await page.locator('#logout-btn').click();
 
-    await page.waitForURL(/auth\.html/, { timeout: 5_000 });
+    await page.waitForURL(/\/$|\/\?/, { timeout: 5_000 });
 
     const token = await page.evaluate(() => localStorage.getItem('anita_jwt'));
     expect(token).toBeNull();
